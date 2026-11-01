@@ -80,3 +80,15 @@ Before production use, confirm that freight/tariffs included in analytical COGS 
 **Cost attribution:** the Margin & Inventory page includes a channel-level gross/contribution margin table and a disclosed cost-pool policy. Product cost, inbound freight and tariffs are treated as product-level cost components for this synthetic case; platform and marketing fees are channel costs. Shared overhead is not arbitrarily allocated. Full ABC/TDABC needs actual cost-driver records (orders, shipments, tickets, activity times), not merely the current aggregated columns.
 
 **Reporting caveats:** the driver bridge analyzes **gross profit dollars** and separately displays gross-margin percentages; it is not yet an exact percentage-point gross-margin bridge. Forecasting, causality, and historical elasticity estimation are out of scope for this phase.
+
+## Phase 3: CFO / Sales role-based views / 双角色视图
+
+Use the sidebar **Audience** selector:
+
+- **CFO Mode:** executive performance, exact gross-profit driver bridge, cost attribution and inventory, what-if scenario, data controls.
+- **Sales Mode:** channel and SKU contribution economics, net revenue, returns and discount rates, SKU/channel review queue, and additional-discount break-even volume sensitivity.
+- **Data Intake & Quality** remains accessible from either mode. Both views consume the same validated canonical data; switching the audience does not change financial definitions or underlying figures.
+
+**Commercial promotion break-even:** the Sales view models an extra discount against current realized net selling price. It holds per-unit product/freight/tariff and marketing costs constant and lets percentage platform fees move with selling price. It computes the volume increase needed to preserve current contribution profit, **not** a demand forecast. It does not claim measured elasticity, advertising incrementality or causal uplift. When volume data is missing, the model is unavailable instead of inventing units.
+
+**Action queue:** relative return-rate and contribution-margin signals are deterministic triage priorities, not AI-generated investment advice. No prices, promotions or purchase orders are automatically changed.
