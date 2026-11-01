@@ -5,6 +5,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from profitability import margin_driver_bridge
+from cost_attribution import POLICY, channel_unit_economics, validate_cost_bridge
+
 from inventory_metrics import inventory_kpis, inventory_snapshot
 
 
@@ -184,6 +187,41 @@ def executive_page(df: pd.DataFrame) -> None:
             unsafe_allow_html=True,
         )
 
+    section_title("Gross Profit Driver Bridge", "毛利变化驱动桥",
+                  "Latest month vs preceding month: exact price-volume-mix-cost decomposition",
+                  "最近两个月：精确拆解净售价、销量、组合与单位成本")
+    driver_result = None
+    driver_reason = "Driver analysis unavailable; review source units and period mapping. / 驱动分析不可用，请复核销量及期间。"
+    try:
+        driver_result = margin_driver_bridge(df)
+        effects = driver_result["effects"]
+        labels = list(effects)
+        bridge_driver = go.Figure(go.Waterfall(
+            measure=["absolute"] + ["relative"] * len(labels) + ["total"],
+            x=["Prior gross profit / 上月毛利"] + labels + ["Current gross profit / 本月毛利"],
+            y=[driver_result["prior_profit"]] + [effects[name] for name in labels] + [0],
+            increasing={"marker": {"color": COLORS["green"]}},
+            decreasing={"marker": {"color": COLORS["red"]}},
+            totals={"marker": {"color": COLORS["ink"]}},
+            connector={"line": {"color": "#CBD5E1"}},
+        ))
+        bridge_driver.update_layout(title="Gross Profit Change / 毛利金额变动")
+        bridge_driver.update_yaxes(tickprefix="$", tickformat="~s")
+        st.plotly_chart(style_chart(bridge_driver, 365), use_container_width=True, config={"displayModeBar": False})
+        negative_drivers = [(name, value) for name, value in effects.items() if value < 0]
+        if negative_drivers:
+            name, impact = min(negative_drivers, key=lambda item: item[1])
+            driver_reason = f"Largest negative gross-profit driver: {name}, {money(impact)}. / 最大负面毛利驱动：{name}，{money(impact)}。"
+        else:
+            driver_reason = "No negative gross-profit drivers in the latest comparison. / 最近两个月没有负面毛利驱动。"
+        st.caption(
+            f"Bridge residual: ${driver_result['residual']:.4f}; gross margin "
+            f"{driver_result['prior_margin']:.1f}% → {driver_result['current_margin']:.1f}%. "
+            "Realized net price includes discounts and returns. / 净售价已包含折扣与退货影响。"
+        )
+    except (ValueError, ZeroDivisionError) as exc:
+        st.info(f"Driver bridge unavailable / 驱动桥暂不可用: {exc}")
+
     section_title("Profitability Bridge", "利润桥", "Reconcile every dollar from gross sales to contribution profit", "从销售总额逐项核对至贡献利润")
     left, right = st.columns([1.45, 1])
     with left:
@@ -213,7 +251,7 @@ def executive_page(df: pd.DataFrame) -> None:
     st.markdown(
         f'<div class="summary-grid">'
         f'<div class="summary-card"><div class="summary-num">01</div><b>What changed / 发生了什么</b><p>Revenue grew {rev_growth:.1f}% from the first to latest quarter, while gross margin moved {margin_delta:+.1f} pp. Growth quality is deteriorating.<br>首季至最近季度收入增长 {rev_growth:.1f}%，但毛利率变化 {margin_delta:+.1f} 个百分点，增长质量下降。</p></div>'
-        f'<div class="summary-card"><div class="summary-num">02</div><b>Why it happened / 原因判断</b><p>Channel mix shifted toward higher-fee channels while freight, tariffs, discounts and returns increased. {weakest_channel} is the largest margin pressure point.<br>渠道组合向高费率渠道倾斜，同时运费、关税、折扣及退货上升；{weakest_channel} 是主要利润压力点。</p></div>'
+        f'<div class="summary-card"><div class="summary-num">02</div><b>Why it happened / 原因判断</b><p>{driver_reason}</p></div>'
         f'<div class="summary-card"><div class="summary-num">03</div><b>CFO action / CFO 行动建议</b><p>Run a controlled price test, renegotiate platform fees, reduce high-return SKUs and rebalance slow inventory. Track contribution profit—not revenue alone.<br>开展小范围提价测试、重谈平台费、治理高退货 SKU 并优化滞销库存；核心考核贡献利润，而非只看收入。</p></div></div>',
         unsafe_allow_html=True,
     )
@@ -222,9 +260,8 @@ def executive_page(df: pd.DataFrame) -> None:
 - Latest-quarter revenue vs. first quarter: {rev_growth:+.1f}%
 - Gross-margin movement: {margin_delta:+.1f} percentage points
 ## Why / 原因
-- Mix shifted toward higher-fee and higher-return channels.
-- Freight and tariffs increased while discounting deepened.
-- Weakest gross-margin channel: {weakest_channel}.
+- {driver_reason}
+- Lowest blended gross-margin channel: {weakest_channel} (not necessarily largest driver).
 ## Recommendation / 建议
 1. Pilot a targeted 3% price increase on resilient SKUs.
 2. Renegotiate platform fees and cap inefficient paid acquisition.
@@ -311,6 +348,28 @@ def margin_inventory_page(df: pd.DataFrame) -> None:
         cost_chart.update_layout(title="Cost per $100 Revenue / 每百美元收入成本", legend_title="")
         cost_chart.update_yaxes(ticksuffix="%")
         st.plotly_chart(style_chart(cost_chart, 365), use_container_width=True, config={"displayModeBar": False})
+
+    section_title("Cost Attribution & Unit Economics", "成本归因与单位经济模型",
+                  "Separate direct product cost from channel-driven selling costs",
+                  "区分直接产品成本与渠道变动销售费用")
+    try:
+        validate_cost_bridge(df)
+        attributed = channel_unit_economics(df)
+        view = attributed[["channel", "net_revenue", "gross_profit", "gross_margin_pct",
+                           "contribution_profit", "contribution_margin_pct"]].rename(columns={
+            "channel": "Channel / 渠道", "net_revenue": "Net Revenue / 净收入",
+            "gross_profit": "Gross Profit / 毛利", "gross_margin_pct": "GM% / 毛利率",
+            "contribution_profit": "Contribution Profit / 贡献利润",
+            "contribution_margin_pct": "CM% / 贡献利润率",
+        })
+        st.dataframe(view, use_container_width=True, hide_index=True)
+        st.caption("Contribution profit excludes only supplied platform and marketing costs; corporate overhead is not arbitrarily allocated. / 贡献利润仅扣除已提供的平台与营销费用，不随意分摊总部间接费用。")
+    except ValueError as exc:
+        st.error(f"Cost bridge validation failed / 成本归因核对失败: {exc}")
+    with st.expander("Attribution Policy & Data Requirements / 归因规则及所需数据"):
+        rules = pd.DataFrame(POLICY, columns=["Cost Pool / 成本池", "Field / 字段", "Target Driver / 目标动因", "Implementation Rule / 实施规则"])
+        st.dataframe(rules, use_container_width=True, hide_index=True)
+        st.warning("Current MVP traces or uses existing SKU/channel amounts. Full Activity-Based Costing requires order, shipment, support-ticket and campaign drivers; do not label this as measured ABC yet. / 当前 MVP 主要追踪已有金额，完整作业成本法仍需要订单、物流、售后及活动动因数据。")
 
     section_title("Inventory Risk Worklist", "库存风险清单", "Prioritize low-turn, low-margin SKUs for action", "优先治理低周转、低毛利 SKU")
     sku["risk_score"] = sku["inventory_days"].clip(upper=365) / 365 * 60 + (40 - sku["gross_margin"]).clip(lower=0) / 40 * 40
