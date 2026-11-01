@@ -92,11 +92,11 @@ def section_title(en: str, zh: str, sub_en: str = "", sub_zh: str = "") -> None:
     st.markdown(f'<div class="section-head"><div class="section-title">{en} <span>/ {zh}</span></div>{subtitle}</div>', unsafe_allow_html=True)
 
 
-def metric_card(en: str, zh: str, value: str, delta: float, note: str, icon: str, pp: bool = False, invert: bool = False) -> None:
-    favorable = delta <= 0 if invert else delta >= 0
+def metric_card(en: str, zh: str, value: str, delta: float | None, note: str, icon: str, pp: bool = False, invert: bool = False) -> None:
+    favorable = (delta <= 0 if invert else delta >= 0) if delta is not None else True
     css = "delta-up" if favorable else "delta-down"
-    arrow = "↑" if delta >= 0 else "↓"
-    delta_label = f"{arrow} {abs(delta):.1f}{' pp' if pp else '%'}"
+    arrow = "↑" if delta is not None and delta >= 0 else "↓"
+    delta_label = f"{arrow} {abs(delta):.1f}{' pp' if pp else '%'}" if delta is not None else ""
     st.markdown(
         f'<div class="metric-card"><div class="metric-head"><span>{en}<small>{zh}</small></span><span class="metric-icon">{icon}</span></div>'
         f'<div class="metric-value">{value}</div><div class="metric-foot"><span class="{css}">{delta_label}</span>&nbsp; {note}</div></div>',
@@ -161,7 +161,7 @@ def executive_page(df: pd.DataFrame) -> None:
     with k3:
         metric_card("Contribution Profit", "贡献利润", money(current["contribution_profit"]), pct_change(current["contribution_profit"], previous["contribution_profit"]), "MoM / 环比", "◇")
     with k4:
-        metric_card("Inventory Days", "库存天数", f"{inventory_days:.0f} days", pct_change(inventory_value, float(previous["inventory_value"])), "inventory value / 库存金额", "◫", invert=True)
+        metric_card("Inventory Days", "库存天数", f"{inventory_days:.0f} days", None, "estimate; MoM unavailable / 估算值，环比暂不可用", "◫", invert=True)
 
     section_title("Performance Pulse", "经营脉搏", "Revenue growth vs. margin quality", "收入增长与利润质量")
     left, right = st.columns([1.58, 0.82])
