@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" role="img" aria-label="Two synthetic sales data sources flow through SQLite, financial controls, fee exception and human-reviewed AI">
+  <defs>
+    <style>.bg{fill:#081b31}.box{fill:#153451;stroke:#3b6484;stroke-width:2}.title{fill:#eef7ff;font:700 24px Arial,sans-serif}.body{fill:#b7d1e3;font:17px Arial,sans-serif}.small{fill:#4cdbc8;font:700 15px Arial,sans-serif}.flow{stroke:#4cdbc8;stroke-width:4;fill:none;marker-end:url(#arrow)}</style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 Z" fill="#4cdbc8"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="600"/>
+  <text class="small" x="60" y="60">APEXEDGE · INTERVIEW VERTICAL SLICE · SYNTHETIC DATA</text>
+  <text class="title" x="60" y="105" font-size="36">Two sources. One controlled margin exception.</text>
+  <rect class="box" x="60" y="158" rx="14" width="255" height="112"/>
+  <text class="title" x="82" y="198">Amazon settlement</text><text class="body" x="82" y="235">Fee and payout lines</text>
+  <rect class="box" x="60" y="302" rx="14" width="255" height="112"/>
+  <text class="title" x="82" y="342">B2B invoice</text><text class="body" x="82" y="379">Customer and net sales</text>
+  <rect class="box" x="407" y="215" rx="14" width="280" height="140"/>
+  <text class="title" x="428" y="253">SQLite canonical</text><text class="body" x="428" y="288">UPSERT and history</text><text class="body" x="428" y="321">Daily = PROVISIONAL</text>
+  <rect class="box" x="781" y="215" rx="14" width="355" height="140"/>
+  <text class="title" x="805" y="253">Financial controls</text><text class="body" x="805" y="288">Settlement + GL check</text><text class="body" x="805" y="321">PASS / FAIL / NOT SUPPLIED</text>
+  <path class="flow" d="M315 214 L358 214 L358 265 L407 265"/>
+  <path class="flow" d="M315 358 L358 358 L358 306 L407 306"/>
+  <path class="flow" d="M687 285 L781 285"/>
+  <rect class="box" x="330" y="451" rx="14" width="308" height="105"/>
+  <text class="title" x="354" y="488">$6 fee exception</text><text class="body" x="354" y="521">Rule + source evidence</text>
+  <rect class="box" x="750" y="451" rx="14" width="385" height="105"/>
+  <text class="title" x="777" y="488">AI + human review</text><text class="body" x="777" y="521">No autonomous posting</text>
+  <path class="flow" d="M950 355 L950 402 L510 402 L510 451"/>
+  <path class="flow" d="M638 505 L750 505"/>
+</svg>
