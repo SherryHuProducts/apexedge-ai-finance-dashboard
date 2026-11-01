@@ -13,6 +13,7 @@ from decision_dashboard import decision_page
 from thin_slice_dashboard import thin_slice_page
 from multi_channel_dashboard import multi_channel_page
 from business_performance_dashboard import business_performance_page
+from master_data_dashboard import master_data_page
 
 
 st.set_page_config(
@@ -94,6 +95,7 @@ def main() -> None:
                 "Decision Intelligence / 决策智能",
                 "Live Pipeline Demo / 财务数据闭环",
                 "Multi-Channel Connectors / 多渠道连接器",
+                "Master Data Mapping / 主数据映射",
                 "Data Intake & Quality / 数据接入与质量",
             ]
         else:
@@ -103,6 +105,7 @@ def main() -> None:
                 "Decision Intelligence / 决策智能",
                 "Live Pipeline Demo / 财务数据闭环",
                 "Multi-Channel Connectors / 多渠道连接器",
+                "Master Data Mapping / 主数据映射",
                 "Data Intake & Quality / 数据接入与质量",
             ]
         page = st.radio(
@@ -113,7 +116,7 @@ def main() -> None:
             key="navigation_" + ("cfo" if role.startswith("CFO") else "sales"),
         )
         st.divider()
-        if page not in ("Data Intake & Quality / 数据接入与质量", "Business Performance / 经营业绩看板") and not data.empty:
+        if page not in ("Data Intake & Quality / 数据接入与质量", "Business Performance / 经营业绩看板", "Master Data Mapping / 主数据映射") and not data.empty:
             min_date = data["date"].min().date()
             max_date = data["date"].max().date()
             selected_dates = st.date_input("Date Range / 日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date)
@@ -145,6 +148,9 @@ def main() -> None:
         return
     if page == "Business Performance / 经营业绩看板":
         business_performance_page(data, pipeline_result, is_demo=not bool(uploaded_files))
+        return
+    if page == "Master Data Mapping / 主数据映射":
+        master_data_page()
         return
     if page == "Live Pipeline Demo / 财务数据闭环":
         thin_slice_page()
