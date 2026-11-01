@@ -1,5 +1,13 @@
 # ApexEdge AI Finance Analyst Dashboard
 
+**Business problem:** Wholesale and marketplace revenue growth can conceal fee leakage, delayed adjustments and declining customer/channel contribution profit. This synthetic, runnable portfolio connects an observed $6 expected-fee variance to its source row, demonstrates control failures after late corrections, and supports CFO/Sales review. It is not an integrated ERP system.
+
+![Architecture of the synthetic finance exception pipeline](docs/thin_slice_architecture.svg)
+
+**Start here:** choose **Live Pipeline Demo / 财务数据闭环** in the Streamlit sidebar. [CFO audit evidence and limitations](docs/cfo_audit.md) · [Interview demo script](docs/thin_slice_interview.md).
+
+**Validation:** 44 automated local tests passed. The four-case synthetic **deterministic detection** evaluation has 100% precision/recall on those hand-constructed cases; **LLM accuracy is NOT MEASURED**. No recovered profit or real savings are claimed.
+
 A bilingual CFO decision-support case for a consumer-electronics company with growing revenue and declining gross margin.
 
 ## Project deliverables / 项目交付内容
