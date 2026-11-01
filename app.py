@@ -8,6 +8,7 @@ from dashboard_ui import CSS, data_quality_page, executive_page, margin_inventor
 from data_pipeline import demo_pipeline_result, ingest_finance_files
 from finance_data import generate_demo_data
 from gl_reconciliation import parse_gl_control_file, reconcile_gl
+from sales_dashboard import sales_page
 
 
 st.set_page_config(
@@ -62,17 +63,31 @@ def main() -> None:
             except (ValueError, KeyError) as exc:
                 pipeline_result["gl_status"] = f"ERROR / 格式错误: {exc}"
 
-        page_options = [
-            "Executive Overview / 管理层总览",
-            "Margin & Inventory / 毛利与库存",
-            "What-if Scenario / 情景模拟",
-            "Data Intake & Quality / 数据接入与质量",
-        ]
+        st.divider()
+        role = st.radio(
+            "Audience / 使用角色",
+            ["CFO Mode / 财务管理层", "Sales Mode / 销售团队"],
+            horizontal=False,
+            key="audience_role",
+        )
+        if role.startswith("CFO"):
+            page_options = [
+                "Executive Overview / 管理层总览",
+                "Margin & Inventory / 毛利与库存",
+                "What-if Scenario / 情景模拟",
+                "Data Intake & Quality / 数据接入与质量",
+            ]
+        else:
+            page_options = [
+                "Sales Workbench / 销售工作台",
+                "Data Intake & Quality / 数据接入与质量",
+            ]
         page = st.radio(
             "Page / 页面",
             page_options,
-            index=3 if uploaded_files else 0,
+            index=len(page_options) - 1 if uploaded_files else 0,
             label_visibility="collapsed",
+            key="navigation_" + ("cfo" if role.startswith("CFO") else "sales"),
         )
         st.divider()
         if page != "Data Intake & Quality / 数据接入与质量" and not data.empty:
@@ -89,7 +104,7 @@ def main() -> None:
             selected_channels = st.multiselect("Channel / 渠道", channel_options, default=channel_options)
             selected_categories = st.multiselect("Category / 品类", category_options, default=category_options)
             selected_departments = st.multiselect("Department / 部门", department_options, default=department_options) if department_options else []
-            if page == "Margin & Inventory / 毛利与库存":
+            if page in ("Margin & Inventory / 毛利与库存", "Sales Workbench / 销售工作台"):
                 sku_options = sorted(data["sku"].dropna().astype(str).unique())
                 selected_skus = st.multiselect("SKU (optional / 可选)", sku_options, default=[])
             else:
@@ -123,6 +138,8 @@ def main() -> None:
         margin_inventory_page(filtered)
     elif page == "What-if Scenario / 情景模拟":
         scenario_page(filtered)
+    elif page == "Sales Workbench / 销售工作台":
+        sales_page(filtered)
 
 
 if __name__ == "__main__":
