@@ -63,3 +63,12 @@ The Executive Overview includes reconciliation checks for:
 Run automated tests with `python -m pip install pytest` and `python -m pytest -q`. GitHub Actions runs the same tests on pushes to main and pull requests.
 
 The supplied dataset is synthetic, not a company operating result. The current 'AI' label describes the target product vision; recommendations on the existing pages are deterministic rules, not an LLM or autonomous AI agent.
+
+### Independent GL reconciliation / 独立总账勾稽
+
+The sidebar accepts an optional CSV/XLSX *GL Control Totals* report with exactly one row per reporting month and columns:
+`date, gl_net_revenue, gl_cogs, gl_inventory_value`.
+
+These are independent accounting control totals—not another copy of the sales detail. The Data Intake & Quality page compares GL and analytical Revenue/COGS/ending Inventory, shows each variance and marks PASS/FAIL. If no GL file is provided, the status stays **NOT SUPPLIED**, never PASS.
+
+Before production use, confirm that freight/tariffs included in analytical COGS follow the same accounting policy and that inventory is valued and scoped consistently. Do not upload confidential employer records to a public demo.
