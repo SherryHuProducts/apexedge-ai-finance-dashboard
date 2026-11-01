@@ -19,3 +19,18 @@ def test_decision_intelligence_renders_without_api_key():
     app = AppTest.from_file("app.py", default_timeout=90).run()
     app.radio(key="navigation_cfo").set_value("Decision Intelligence / 决策智能").run()
     assert not app.exception
+
+
+def test_thin_pipeline_demo_renders_with_synthetic_controls():
+    app = AppTest.from_file("app.py", default_timeout=90).run()
+    app.radio(key="navigation_cfo").set_value("Live Pipeline Demo / 财务数据闭环").run()
+    assert not app.exception
+    assert any("PASS" in metric.value for metric in app.metric)
+
+
+def test_thin_pipeline_demo_backfill_flags_mismatch():
+    app = AppTest.from_file("app.py", default_timeout=90).run()
+    app.radio(key="navigation_cfo").set_value("Live Pipeline Demo / 财务数据闭环").run()
+    app.checkbox[1].check().run()
+    assert not app.exception
+    assert any("FAIL" in metric.value for metric in app.metric)
