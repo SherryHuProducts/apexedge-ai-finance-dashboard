@@ -65,6 +65,17 @@ def main() -> None:
                 pipeline_result["gl_status"] = f"ERROR / 格式错误: {exc}"
 
         st.divider()
+        st.caption("Data source / 数据来源")
+        st.info("Uploaded reports / 上传数据" if uploaded_files else "Synthetic demo / 模拟数据", icon="🗂️")
+        st.caption("Independent GL control / 独立总账勾稽")
+        gl_status = pipeline_result["gl_status"]
+        if gl_status.startswith("PASS"):
+            st.success(gl_status)
+        elif gl_status.startswith(("FAIL", "ERROR", "BLOCKED")):
+            st.error(gl_status)
+        else:
+            st.warning(gl_status)
+        st.divider()
         role = st.radio(
             "Audience / 使用角色",
             ["CFO Mode / 财务管理层", "Sales Mode / 销售团队"],
