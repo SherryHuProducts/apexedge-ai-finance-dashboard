@@ -14,6 +14,7 @@ from thin_slice_dashboard import thin_slice_page
 from multi_channel_dashboard import multi_channel_page
 from business_performance_dashboard import business_performance_page
 from master_data_dashboard import master_data_page
+from channel_pl_dashboard import channel_pl_page
 
 
 st.set_page_config(
@@ -89,6 +90,7 @@ def main() -> None:
         if role.startswith("CFO"):
             page_options = [
                 "Business Performance / 经营业绩看板",
+                "Channel P&L Bridge / 渠道利润桥表",
                 "Executive Overview / 管理层总览",
                 "Margin & Inventory / 毛利与库存",
                 "What-if Scenario / 情景模拟",
@@ -101,6 +103,7 @@ def main() -> None:
         else:
             page_options = [
                 "Business Performance / 经营业绩看板",
+                "Channel P&L Bridge / 渠道利润桥表",
                 "Sales Workbench / 销售工作台",
                 "Decision Intelligence / 决策智能",
                 "Live Pipeline Demo / 财务数据闭环",
@@ -116,7 +119,7 @@ def main() -> None:
             key="navigation_" + ("cfo" if role.startswith("CFO") else "sales"),
         )
         st.divider()
-        if page not in ("Data Intake & Quality / 数据接入与质量", "Business Performance / 经营业绩看板", "Master Data Mapping / 主数据映射") and not data.empty:
+        if page not in ("Data Intake & Quality / 数据接入与质量", "Business Performance / 经营业绩看板", "Master Data Mapping / 主数据映射", "Channel P&L Bridge / 渠道利润桥表") and not data.empty:
             min_date = data["date"].min().date()
             max_date = data["date"].max().date()
             selected_dates = st.date_input("Date Range / 日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date)
@@ -151,6 +154,9 @@ def main() -> None:
         return
     if page == "Master Data Mapping / 主数据映射":
         master_data_page()
+        return
+    if page == "Channel P&L Bridge / 渠道利润桥表":
+        channel_pl_page()
         return
     if page == "Live Pipeline Demo / 财务数据闭环":
         thin_slice_page()
