@@ -1,0 +1,2 @@
+record_id,order_date,source_order_id,sku,customer_id,net_sales,units,fee_expected,fee_actual,settlement_net,updated_at
+A-1,2026-10-20,AMZ-1008,SKU-RED,MARKETPLACE,120.00,2,18.00,24.00,100.00,2026-10-21T10:00:00Z
