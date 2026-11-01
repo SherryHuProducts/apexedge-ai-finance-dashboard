@@ -372,10 +372,53 @@ def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...]) -> dict[s
         values = [str(value) for value in series.dropna() if str(value) not in ("", "Unspecified", "UNSPECIFIED")]
         return values[0] if values else "Unspecified"
 
-    aggregation: dict[str, Any] = {field: (lambda s: s.sum(min_count=1)) for field in NUMERIC_FIELDS}
+    # Flow metrics can be summed within a source. Balance snapshots cannot:
+    # multiple exports of the same ending inventory must not inflate inventory.
+    snapshot_fields = {"inventory_units", "inventory_value"}
+    aggregation: dict[str, Any] = {
+        field: (lambda values: values.max()) if field in snapshot_fields
+        else (lambda values: values.sum(min_count=1))
+        for field in NUMERIC_FIELDS
+    }
     aggregation.update({"product": first_known, "category": first_known, "source_department": lambda s: ", ".join(sorted(set(map(str, s.dropna())))), "source_file": lambda s: ", ".join(sorted(set(map(str, s.dropna())))), "source_sheet": lambda s: ", ".join(sorted(set(map(str, s.dropna()))))})
     canonical = staging.groupby(KEY_FIELDS, dropna=False, as_index=False).agg(aggregation)
-    canonical["analysis_ready"] = canonical[REQUIRED_ANALYSIS_FIELDS].notna().all(axis=1)
+    # A shared metric in different files at the same grain might represent
+    # overlapping extracts rather than additive transactions. Fail closed
+    # until the source ownership / grain has been explicitly resolved.
+    overlapping = []
+    for field in NUMERIC_FIELDS:
+        populated = staging.loc[staging[field].notna(), KEY_FIELDS + ["source_file"]]
+        if populated.empty:
+            continue
+        source_counts = populated.groupby(KEY_FIELDS, dropna=False)["source_file"].nunique()
+        conflict_keys = source_counts[source_counts > 1].index
+        if len(conflict_keys):
+            overlapping.append((field, conflict_keys))
+            conflict_index = pd.MultiIndex.from_frame(canonical[KEY_FIELDS]).isin(conflict_keys)
+            canonical.loc[conflict_index, field] = float("nan")
+            issues.append(_issue(
+                "Critical / 严重", "Combined dataset / 合并数据", "n.a.",
+                f"Overlapping source ownership for {field} / {field} 多来源重复归属",
+                int(conflict_index.sum()),
+                "Resolve source ownership and transaction grain before summing / 先确认指标权威来源和明细粒度",
+            ))
+
+    # Finance identities validate the inputs; they are not a substitute for
+    # independent GL-to-subledger reconciliation.
+    has_revenue_inputs = canonical[["gross_sales", "discount", "returns", "net_revenue"]].notna().all(axis=1)
+    revenue_difference = (
+        canonical["gross_sales"] - canonical["discount"]
+        - canonical["returns"] - canonical["net_revenue"]
+    ).abs()
+    revenue_mismatch = has_revenue_inputs & (revenue_difference > 0.01)
+    if revenue_mismatch.any():
+        issues.append(_issue(
+            "Critical / 严重", "Combined dataset / 合并数据", "n.a.",
+            "Net revenue formula mismatch / 净收入勾稽不一致",
+            int(revenue_mismatch.sum()),
+            "Review discounts, returns, period and gross-to-net mapping / 核对折扣、退货、期间和收入映射",
+        ))
+    canonical["analysis_ready"] = canonical[REQUIRED_ANALYSIS_FIELDS].notna().all(axis=1) & ~revenue_mismatch
     canonical["gross_profit"] = pd.NA
     canonical["contribution_profit"] = pd.NA
     ready = canonical["analysis_ready"]
