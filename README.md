@@ -1,3 +1,26 @@
+# OLX Finance Intelligence / OLX 财务智能系统
+
+**Default: empty financial workspace.** No synthetic revenue, margin, or analysis appears until the user uploads source reports and selects **Validate & Load** in **ERP Integration / ERP 集成**. The clean, white/cream CFO and Sales VP interface has three primary pages:
+
+1. **ERP Integration / ERP 集成** — source intake, validation, source audit, independent GL comparison and a documented extraction → canonical mapping → database → scheduling architecture. Live APIs, hosted DB and daily cron are **not** connected.
+2. **Financial Reporting / 财务报告** — period-filtered P&L, KPI comparisons, channel breakdown, source detail and separate GL status. Estimates/unallocated amounts are not invented.
+3. **Analysis & Planning / 分析与规划** — user-selected KPI trends, month/quarter/year variance, driver breakdown and an explicitly assumption-based pricing sensitivity.
+
+Switch **View As / 角色** between **CFO** and **Sales VP**. Toggle **Case Studies & Code / 案例与代码** for synthetic portfolio demos, which are not part of the main workspace.
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+**Data governance:** On uploading customer financials, verify confidentiality, allowed usage and access rights. Do not put actual business data or credentials into the public portfolio.
+
+See [Case Study Directory](case_studies/README.md). The older ApexEdge portfolio documentation below is retained as historical case-study reference and **does not describe the current default app navigation**.
+
+---
+
+## Legacy ApexEdge Case Study Documentation
+
 # ApexEdge AI Finance Analyst Dashboard
 
 **Business problem:** Wholesale and marketplace revenue growth can conceal fee leakage, delayed adjustments and declining customer/channel contribution profit. This synthetic, runnable portfolio connects an observed $6 expected-fee variance to its source row, demonstrates control failures after late corrections, and supports CFO/Sales review. It is not an integrated ERP system.
