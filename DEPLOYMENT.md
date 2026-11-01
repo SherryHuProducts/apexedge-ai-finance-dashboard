@@ -1,33 +1,31 @@
-# ApexEdge deployment guide
-
-## Demo policy
-
-Use **synthetic data only** in a public demo. The GitHub repository is currently private. Do not change its visibility without the owner's approval. No API key is necessary to demonstrate deterministic CFO/Sales metrics and human decision review.
+# OLX Finance Intelligence — Web Deployment
 
 ## Streamlit Community Cloud
 
-1. Sign into Streamlit Community Cloud with an authorized GitHub account.
-2. Select **Create app → From GitHub**, then authorize access to the `SherryHuProducts/apexedge-ai-finance-dashboard` repository.
-3. Set branch `main` and entrypoint `app.py`.
-4. Use `requirements.txt` and `runtime.txt` from this repo.
-5. Keep the app private or access-controlled while testing. Review its sharing policy before publishing.
-6. Run the smoke checklist below.
-7. To enable optional OpenAI explanations, configure `OPENAI_API_KEY` and `OPENAI_MODEL` as platform secrets or environment variables. The current app reads environment variables. Never put API keys into Git.
-8. Public deployment with optional AI should include usage controls and a budget limit before inviting unknown users.
+Deploy from the existing private repository `SherryHuProducts/apexedge-ai-finance-dashboard` using branch `main` and entrypoint `app.py`. `requirements.txt`, `runtime.txt` and `.streamlit/config.toml` define the application environment and warm cream theme.
 
-## Smoke checklist
+If a Streamlit Cloud app **already points to this branch**, a GitHub commit should trigger its normal redeployment. Verify the exact app URL in the Streamlit Cloud dashboard before announcing an updated live website. Otherwise create or reconfigure a private app through Streamlit Community Cloud.
 
-- [ ] CFO default landing page renders without errors
-- [ ] Sales mode shows four channels and SKU table
-- [ ] Promotion break-even reacts to additional-discount slider
-- [ ] Both audiences use consistent Net Revenue / Contribution Profit
-- [ ] Decision Intelligence displays anomalies with evidence
-- [ ] No API key: deterministic signals still function
-- [ ] Optional AI requires consent and sends only the previewed aggregated packet
-- [ ] Data Quality shows **NOT SUPPLIED** before GL upload
-- [ ] No uploaded file data is committed or sent outside authorized systems
-- [ ] Exported decision events are clearly session-only
+Keep the deployment **private/access-controlled**. The OLX app currently uses Streamlit session memory, not enterprise identity segregation or a durable production database. Do not upload sensitive employer records to a public demonstration.
 
-## Security / production gaps
+## Web smoke checklist (new OLX app)
 
-The Streamlit prototype is **not** a production financial system: it has no identity-based authorization, durable audit store, separate tenants, API rate limiting or enterprise secrets governance. Do not use it to process confidential employer records in a publicly accessible deployment.
+- [ ] Main app starts from `app.py` without import errors.
+- [ ] Sidebar brand is **OLX**, cream-white background, dark text.
+- [ ] Default opening page is **ERP Integration / ERP 集成**, no preloaded sample data.
+- [ ] **Financial Reporting / 财务报告** is blank before uploading validated records.
+- [ ] **Analysis & Planning / 分析与规划** is blank before upload.
+- [ ] Role selector switches **CFO / Sales VP**.
+- [ ] Source report upload → **Validate & Load** reveals source/quality results.
+- [ ] Financial reporting shows only supplied metrics and selected periods.
+- [ ] Analysis shows actual KPI trends and explicitly illustrative pricing assumptions.
+- [ ] Missing periods, estimates and unallocated amounts are not fabricated.
+- [ ] **Case Studies & Code / 案例与代码** is hidden by default and opens only when toggled.
+- [ ] Synthetic case content never appears in the OLX main workspace.
+- [ ] **Clear workspace** removes source data and associated GL status.
+
+## What is not deployed
+
+Live retailer/ERP API tokens, EDI providers, scheduler, daily automatic refresh, persistent relational database, production AI analysis, signed-off GAAP reporting and fine-grained tenant access are **not** in this prototype. The ERP Integration page describes their implementation approach, clearly distinguished from functionality currently running.
+
+Optional LLM API keys must never be committed to source control. Production AI and confidential business data require governance approval, access controls, evaluation and audit logging.
