@@ -267,15 +267,15 @@ def margin_inventory_page(df: pd.DataFrame) -> None:
         contribution_profit=("contribution_profit", "sum"), units=("units", "sum"), cogs=("product_cost", "sum"),
     )
     inventory = inventory_snapshot(latest_snapshot).groupby("sku", as_index=False).agg(inventory_value=("inventory_value", "sum"), inventory_units=("inventory_units", "sum"))
-    sku = aggregates.merge(inventory, on="sku", how="left").fillna(0)
-    sku["gross_margin"] = sku["gross_profit"] / sku["net_revenue"].where(sku["net_revenue"] != 0, 1) * 100
+    sku = aggregates.merge(inventory, on="sku", how="left")
+    sku["gross_margin"] = sku["gross_profit"] / sku["net_revenue"].replace(0, float("nan")) * 100
     months = max(df["date"].nunique(), 1)
-    sku["turnover"] = (sku["cogs"] * 12 / months) / sku["inventory_value"].where(sku["inventory_value"] != 0, 1)
-    sku["inventory_days"] = 365 / sku["turnover"].where(sku["turnover"] != 0, 1)
+    sku["turnover"] = (sku["cogs"] * 12 / months) / sku["inventory_value"].where(sku["inventory_value"] > 0)
+    sku["inventory_days"] = 365 / sku["turnover"].where(sku["turnover"] > 0)
 
     section_title("SKU Profitability Map", "SKU 盈利地图", "Bubble size represents ending inventory value", "气泡大小代表期末库存金额")
     scatter = px.scatter(
-        sku, x="net_revenue", y="gross_margin", size="inventory_value", color="category", hover_name="sku",
+        sku.assign(bubble_size=sku["inventory_value"].fillna(0).clip(lower=0)), x="net_revenue", y="gross_margin", size="bubble_size", color="category", hover_name="sku",
         hover_data={"product": True, "net_revenue": ":$,.0f", "gross_margin": ":.1f", "inventory_value": ":$,.0f", "turnover": ":.2f"},
         labels={"net_revenue": "Net Revenue / 净收入", "gross_margin": "Gross Margin / 毛利率", "category": "Category / 品类"},
         size_max=38, color_discrete_sequence=["#2563EB", "#10B981", "#8B5CF6", "#F59E0B", "#0EA5E9", "#EF4444"],
