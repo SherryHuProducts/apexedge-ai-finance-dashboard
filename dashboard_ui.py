@@ -183,7 +183,7 @@ def executive_page(df: pd.DataFrame) -> None:
         st.markdown(
             f'<div class="signal-card"><div class="signal-label">Growth / 增长</div><div class="signal-value">Revenue {rev_growth:+.1f}%</div><div class="signal-note">Latest quarter vs. first quarter<br>最近季度对比首季度</div></div>'
             f'<div class="alert-card"><div class="signal-label">Margin alert / 毛利预警</div><div class="signal-value">{margin_delta:+.1f} pp</div><div class="signal-note">Growth is not converting into margin.<br>收入增长未转化为毛利改善。</div></div>'
-            f'<div class="signal-card" style="margin-top:9px"><div class="signal-label">Primary drag / 主要拖累</div><div class="signal-value">{weakest_channel} channel</div><div class="signal-note">Lowest blended gross margin<br>综合毛利率最低的渠道</div></div>',
+            f'<div class="signal-card" style="margin-top:9px"><div class="signal-label">Lowest GM channel / 最低毛利率渠道</div><div class="signal-value">{weakest_channel} channel</div><div class="signal-note">Lowest blended gross margin<br>综合毛利率最低的渠道</div></div>',
             unsafe_allow_html=True,
         )
 
