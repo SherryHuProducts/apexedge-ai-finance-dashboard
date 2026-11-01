@@ -9,6 +9,7 @@ import streamlit as st
 
 from ai_client import available, generate_explanation
 from thin_slice import AMAZON, B2B, GL_CONTROL, connect, deterministic_explanation, evaluate, evidence_packet, ingest
+from evaluate_slice import run_gold_set
 
 
 def thin_slice_page() -> None:
@@ -40,13 +41,23 @@ def thin_slice_page() -> None:
         )
     try:
         with connect() as db:
-            first = {"Amazon": ingest(db, "Amazon", AMAZON), "B2B": ingest(db, "B2B", B2B)}
+            seed_amazon = amazon_csv if not backfill else AMAZON
+            first = {
+                "Amazon": ingest(db, "Amazon", seed_amazon,
+                                 amazon_upload.name if amazon_upload else None),
+                "B2B": ingest(db, "B2B", b2b_csv,
+                              b2b_upload.name if b2b_upload else None),
+            }
             # A second identical run proves no duplicate source rows/events.
-            replay = {"Amazon": ingest(db, "Amazon", AMAZON), "B2B": ingest(db, "B2B", B2B)}
-            if amazon_upload or b2b_upload or backfill:
-                current = {"Amazon": ingest(db, "Amazon", amazon_csv), "B2B": ingest(db, "B2B", b2b_csv)}
-            else:
-                current = first
+            replay = {
+                "Amazon": ingest(db, "Amazon", seed_amazon,
+                                 amazon_upload.name if amazon_upload else None),
+                "B2B": ingest(db, "B2B", b2b_csv,
+                              b2b_upload.name if b2b_upload else None),
+            }
+            if backfill:
+                ingest(db, "Amazon", amazon_csv,
+                       amazon_upload.name if amazon_upload else None)
             # The GL snapshot remains the original control, and will show FAIL after a change.
             result = evaluate(db, GL_CONTROL if supply_gl else None)
     except (ValueError, KeyError, UnicodeDecodeError) as exc:
@@ -82,16 +93,35 @@ def thin_slice_page() -> None:
     st.subheader("3. Fee exception and evidence / 异常与证据")
     if result["fee_signals"]:
         signals = pd.DataFrame(result["fee_signals"])
-        st.dataframe(signals[["channel", "record_id", "expected_fee_cents",
-                              "actual_fee_cents", "difference_cents"]].rename(
+        st.dataframe(signals[["channel", "record_id", "source_file", "source_row", "category", "status",
+                              "expected_fee_cents", "actual_fee_cents", "difference_cents"]].rename(
             columns={"expected_fee_cents": "expected_cents",
                      "actual_fee_cents": "actual_cents", "difference_cents": "variance_cents"}
         ), use_container_width=True, hide_index=True)
+        chosen = st.selectbox("Trace one exception to source / 下钻异常", signals["record_id"].tolist())
+        source = next(row for row in result["rows"] if row["record_id"] == chosen)
+        st.write("Source evidence / 来源记录")
+        st.dataframe(pd.DataFrame([{
+            "file": source["source_file"], "csv_row": source["source_row"],
+            "order_id": source["order_id"], "sku": source["sku"],
+            "net_sales_usd": source["net_sales_cents"] / 100,
+            "expected_fee_usd": source["fee_expected_cents"] / 100,
+            "actual_fee_usd": source["fee_actual_cents"] / 100,
+            "settlement_usd": source["settlement_net_cents"] / 100,
+            "source_updated_at": source["updated_at"]
+        }]), use_container_width=True, hide_index=True)
     else:
         st.success("No fee deviations in this sample.")
     st.markdown(deterministic_explanation(result))
 
     packet = evidence_packet(result)
+    with st.expander("Synthetic detection gold set / 模拟规则评估"):
+        scores = run_gold_set()
+        st.write(f"{scores['case_count']} hand-constructed cases · "
+                 f"Precision {scores['precision']:.0%} · Recall {scores['recall']:.0%}")
+        st.dataframe(pd.DataFrame(scores["cases"]), use_container_width=True, hide_index=True)
+        st.warning("These are in-sample synthetic rule checks. LLM accuracy is NOT MEASURED. "
+                   "Production use requires a separate human-labeled external gold set.")
     with st.expander("Exact permitted AI evidence packet / 可发送的聚合证据"):
         st.json(packet)
     st.caption("No raw uploaded rows, order IDs, customer names, or SKU identifiers are sent to AI.")
