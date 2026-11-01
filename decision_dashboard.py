@@ -9,15 +9,7 @@ import streamlit as st
 from ai_client import available, generate_explanation
 from dashboard_ui import hero, section_title
 from decision_engine import detect_signals, evidence_packet, proposal_from_signal
-
-
-TRANSITIONS = {
-    "Proposed": ["Proposed", "Approved", "Rejected"],
-    "Approved": ["Approved", "In progress", "Rejected"],
-    "In progress": ["In progress", "Completed", "Rejected"],
-    "Completed": ["Completed"],
-    "Rejected": ["Rejected"],
-}
+from decision_workflow import TRANSITIONS, update_decision
 
 
 def decision_page(frame: pd.DataFrame, audience: str) -> None:
@@ -96,18 +88,16 @@ def decision_page(frame: pd.DataFrame, audience: str) -> None:
             notes = st.text_area("Evidence, test and follow-up notes / 依据、试验及跟进记录", value=record["notes"])
             submitted = st.form_submit_button("Save review / 保存复核")
         if submitted:
-            if status in ("Approved", "In progress", "Completed") and not owner.strip():
-                st.error("Owner is required for approval or execution. / 审批及执行必须指定负责人。")
-            else:
-                previous = record["status"]
-                record.update(status=status, owner=owner, expected_impact=expected,
-                              actual_impact=actual, notes=notes)
-                st.session_state["decision_events"].append({
-                    "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-                    "id": selected, "from_status": previous, "to_status": status,
-                    "actor": owner or "Demo user", "note": notes[:240],
-                })
+            try:
+                updated, event = update_decision(
+                    record, status=status, owner=owner, expected_impact=expected,
+                    actual_impact=actual, notes=notes,
+                )
+                records[selected] = updated
+                st.session_state["decision_events"].append(event)
                 st.success("Review recorded / 复核已记录。")
+            except ValueError as exc:
+                st.error(f"Review blocked / 复核被阻止: {exc}")
         st.dataframe(pd.DataFrame([records[i] for i in relevant_ids]), use_container_width=True, hide_index=True)
     events = pd.DataFrame(st.session_state["decision_events"])
     if not events.empty:
