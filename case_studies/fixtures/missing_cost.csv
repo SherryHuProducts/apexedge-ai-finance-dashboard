@@ -1,0 +1,2 @@
+date,sku,channel,gross_sales,discount,returns,net_revenue,units,freight,tariff,platform_fee,marketing_spend
+2026-10-20,SKU-NOCOST,Amazon,120.00,0.00,0.00,120.00,2,5.00,2.00,12.00,0.00
