@@ -50,3 +50,16 @@ The Executive Overview includes reconciliation checks for:
 - `Net Revenue = Gross Sales - Discounts - Returns`
 - `Gross Profit = Net Revenue - Product Cost - Freight - Tariff`
 
+
+## Phase 1 financial controls / 第一阶段财务控制
+
+- **Inventory is a snapshot:** ending inventory is de-duplicated at reporting month × SKU × channel; it is not additive across repeated exports. Channel-level stock pools are assumed independent. If inventory is shared across channels, load a separate warehouse/SKU snapshot before relying on channel turnover.
+- **Turnover basis:** annualized product cost + freight + tariffs divided by average monthly inventory in matching periods. This is a management-analysis estimate; companies must align the cost basis with their GL capitalization policy.
+- **Source ownership:** when separate files supply the same metric at the same date/SKU/channel grain, that metric is blocked rather than silently double-counted. The analyst must resolve source ownership or adjust the data grain.
+- **Gross-to-net validation:** net revenue must equal gross sales less discounts and returns within $0.01 for each analysis record; otherwise it is blocked.
+- **Missing is not zero:** missing financial prerequisites block profitability analysis. Missing inventory balance yields unavailable inventory KPIs.
+- **Important limitation:** internal arithmetic checks are not GL-to-subledger reconciliation. Production use requires ERP control totals, mapping ownership, period cutoffs, source approvals, role permissions and audit evidence.
+
+Run automated tests with `python -m pip install pytest` and `python -m pytest -q`. GitHub Actions runs the same tests on pushes to main and pull requests.
+
+The supplied dataset is synthetic, not a company operating result. The current 'AI' label describes the target product vision; recommendations on the existing pages are deterministic rules, not an LLM or autonomous AI agent.
