@@ -453,6 +453,16 @@ def data_quality_page(result: dict) -> None:
         "CSV and Excel files from different teams and periods are mapped, cleaned, reconciled and traced before financial analysis · 对不同部门和期间的 CSV 与 Excel 报表先完成映射、清洗、勾稽和血缘记录，再进入财务分析",
     )
 
+    section_title("Independent GL Reconciliation", "独立总账对账",
+                  "Not supplied is not a pass", "未提供总账数据不等于对账通过")
+    gl_status = result.get("gl_status", "NOT SUPPLIED / 尚未提供")
+    st.write(f"**GL Status / 对账状态: {gl_status}**")
+    gl_recon = result.get("gl_recon")
+    if isinstance(gl_recon, pd.DataFrame):
+        st.dataframe(gl_recon, use_container_width=True, hide_index=True)
+    else:
+        st.caption("Upload an independent monthly GL control file in the sidebar to compare revenue, COGS and ending inventory. / 在侧边栏上传独立月度总账控制数，核对收入、成本与期末库存。")
+
     k1, k2, k3, k4, k5 = st.columns(5)
     with k1:
         metric_card("Files", "文件数", f"{stats.get('files', 0):,}", 0, "uploaded / 已上传", "▤")
