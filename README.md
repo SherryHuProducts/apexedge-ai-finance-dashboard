@@ -12,6 +12,18 @@ A bilingual CFO decision-support case for a consumer-electronics company with gr
 
 **Demo vs production:** ApexEdge is a fictional business, the included transactions are synthetic, and this is a decision-support prototype. No live ERP/CRM connection, durable access control, durable approval database or autonomous business execution is claimed. An optional GL control file is required for independent accounting reconciliation; until supplied, the status is **NOT SUPPLIED**, not PASS. Any optional AI explanation requires the user's explicit consent.
 
+## Interview vertical slice / 面试财务闭环演示
+
+A runnable synthetic two-channel **Amazon + B2B → SQLite → controls → fee exception → opt-in AI explanation → human review** example is now available in both CFO and Sales navigation under **Live Pipeline Demo / 财务数据闭环**. It is a small, end-to-end case, not a claim of a live automated enterprise pipeline.
+
+- [Interview walkthrough, controls, scorecard and Q&A](docs/thin_slice_interview.md)
+- [Clean architecture diagram](docs/thin_slice_architecture.svg)
+- CLI: `python thin_slice.py`
+- Demo fact: a **$6 expected-vs-actual platform fee variance** is visible even when settlement arithmetic and the initial synthetic GL control match. Its cause is not established.
+- Replaying identical source data adds no business rows. A late source adjustment is logged and causes the original GL control to fail until investigated.
+- Operational monitoring is always **PROVISIONAL**. A synthetic monthly control match is not production Accounting signoff.
+- The live API connectors, daily scheduler, durable approvals and measured monetary ROI are **not implemented**.
+
 ## Run locally
 
 ```bash
