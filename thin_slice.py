@@ -180,6 +180,8 @@ def evaluate(db: sqlite3.Connection, gl_control: dict | None = None) -> dict:
          "evidence_fields": ["net_sales", "fee_expected", "fee_actual", "source_updated_at"]}
         for r in rows if r["fee_actual_cents"] != r["fee_expected_cents"]
     ]
+    for index, signal in enumerate(fee_signals, start=1):
+        signal["evidence_id"] = f"FEE-{index:03d}"
     gl_variances = {}
     if gl_control is not None:
         for key, actual in (("net_sales_cents", totals["net_sales_cents"]),
@@ -208,6 +210,7 @@ def evidence_packet(result: dict) -> dict:
         },
         "signals": [
             {"metric": "platform_fee_variance_usd",
+             "evidence_id": s["evidence_id"],
              "baseline": round(s["expected_fee_cents"] / 100, 2),
              "observed": round(s["actual_fee_cents"] / 100, 2),
              "difference": round(s["difference_cents"] / 100, 2),
