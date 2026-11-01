@@ -72,3 +72,11 @@ The sidebar accepts an optional CSV/XLSX *GL Control Totals* report with exactly
 These are independent accounting control totals—not another copy of the sales detail. The Data Intake & Quality page compares GL and analytical Revenue/COGS/ending Inventory, shows each variance and marks PASS/FAIL. If no GL file is provided, the status stays **NOT SUPPLIED**, never PASS.
 
 Before production use, confirm that freight/tariffs included in analytical COGS follow the same accounting policy and that inventory is valued and scoped consistently. Do not upload confidential employer records to a public demo.
+
+## Phase 2: Profitability intelligence / 盈利分析升级
+
+**Gross Profit Driver Bridge:** the CFO overview now compares the most recent two selected months. An exact midpoint decomposition separates Volume, SKU/channel Mix, realized Net Price, Product Cost, Freight and Tariff. The total reconciles to the change in gross-profit dollars, within $0.02. The realized net price already incorporates discounts and returns; no second deduction is made. New/discontinued SKUs are attributed to volume/mix rather than inventing historical prices.
+
+**Cost attribution:** the Margin & Inventory page includes a channel-level gross/contribution margin table and a disclosed cost-pool policy. Product cost, inbound freight and tariffs are treated as product-level cost components for this synthetic case; platform and marketing fees are channel costs. Shared overhead is not arbitrarily allocated. Full ABC/TDABC needs actual cost-driver records (orders, shipments, tickets, activity times), not merely the current aggregated columns.
+
+**Reporting caveats:** the driver bridge analyzes **gross profit dollars** and separately displays gross-margin percentages; it is not yet an exact percentage-point gross-margin bridge. Forecasting, causality, and historical elasticity estimation are out of scope for this phase.
