@@ -93,7 +93,7 @@ def thin_slice_page() -> None:
     st.subheader("3. Fee exception and evidence / 异常与证据")
     if result["fee_signals"]:
         signals = pd.DataFrame(result["fee_signals"])
-        st.dataframe(signals[["channel", "record_id", "source_file", "source_row", "category", "status",
+        st.dataframe(signals[["evidence_id", "channel", "record_id", "source_file", "source_row", "category", "status",
                               "expected_fee_cents", "actual_fee_cents", "difference_cents"]].rename(
             columns={"expected_fee_cents": "expected_cents",
                      "actual_fee_cents": "actual_cents", "difference_cents": "variance_cents"}
