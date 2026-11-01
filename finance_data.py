@@ -8,8 +8,8 @@ import streamlit as st
 
 
 @st.cache_data(show_spinner=False)
-def generate_demo_data(seed: int = 42) -> pd.DataFrame:
-    """Create a 12-month consumer-electronics case with growth and margin compression."""
+def generate_demo_data(seed: int = 42, months_count: int = 12) -> pd.DataFrame:
+    """Create synthetic commerce history (12 months by default; 24 for YoY dashboard)."""
     rng = random.Random(seed)
     channels = ["Amazon", "DTC", "Retail", "TikTok"]
     channel_factor = {"Amazon": 1.22, "DTC": 0.86, "Retail": 0.72, "TikTok": 0.58}
@@ -47,31 +47,35 @@ def generate_demo_data(seed: int = 42) -> pd.DataFrame:
         )
 
     last_month = pd.Timestamp(date.today().replace(day=1))
-    months = pd.date_range(end=last_month, periods=12, freq="MS")
+    months = pd.date_range(end=last_month, periods=months_count, freq="MS")
     rows = []
     for month_idx, month in enumerate(months):
         season = 1.23 if month.month in (10, 11, 12) else (0.90 if month.month in (1, 2) else 1.0)
         for item in sku_rows:
             for channel in channels:
-                growth = 1 + channel_growth[channel] * month_idx / 11
+                progress = month_idx / max(months_count - 1, 1)
+                growth = 1 + channel_growth[channel] * progress
                 units = max(1, round(12 * item["velocity"] * channel_factor[channel] * growth * season * rng.uniform(0.72, 1.27)))
                 price = item["list_price"] * rng.uniform(0.985, 1.015)
                 gross_sales = units * price
-                discount_rate = max(0, channel_discount[channel] + 0.006 * month_idx / 11 + rng.uniform(-0.012, 0.012))
+                discount_rate = max(0, channel_discount[channel] + 0.006 * progress + rng.uniform(-0.012, 0.012))
                 discount = gross_sales * discount_rate
                 pre_return_sales = gross_sales - discount
-                return_rate = max(0, channel_return[channel] + item["category_return"] + 0.012 * month_idx / 11 + rng.uniform(-0.01, 0.01))
+                return_rate = max(0, channel_return[channel] + item["category_return"] + 0.012 * progress + rng.uniform(-0.01, 0.01))
                 returns = pre_return_sales * min(return_rate, 0.28)
                 net_revenue = pre_return_sales - returns
-                product_cost = units * item["unit_cost"] * (1 + 0.035 * month_idx / 11)
-                freight = units * item["freight_unit"] * (1 + 0.30 * month_idx / 11)
-                tariff = product_cost * (0.035 + 0.032 * month_idx / 11)
+                product_cost = units * item["unit_cost"] * (1 + 0.035 * progress)
+                freight = units * item["freight_unit"] * (1 + 0.30 * progress)
+                tariff = product_cost * (0.035 + 0.032 * progress)
                 platform_fee = net_revenue * channel_fee[channel]
-                marketing_spend = net_revenue * channel_marketing[channel] * (1 + 0.08 * month_idx / 11)
+                marketing_spend = net_revenue * channel_marketing[channel] * (1 + 0.08 * progress)
                 gross_profit = net_revenue - product_cost - freight - tariff
                 contribution_profit = gross_profit - platform_fee - marketing_spend
                 inventory_units = max(1, round(units * rng.uniform(1.4, 4.9) * (1.12 if item["category"] in ("Monitors", "Components") else 1)))
                 inventory_value = inventory_units * item["unit_cost"]
+                places = [("West", "Los Angeles"), ("West", "San Francisco"),
+                          ("East", "New York"), ("South", "Dallas"), ("Midwest", "Chicago")]
+                region, city = places[(int(item["sku"].split("-")[-1]) + channels.index(channel)) % len(places)]
                 rows.append(
                     {
                         "date": month,
@@ -79,6 +83,8 @@ def generate_demo_data(seed: int = 42) -> pd.DataFrame:
                         "product": item["product"],
                         "category": item["category"],
                         "channel": channel,
+                        "region": region,
+                        "city": city,
                         "units": units,
                         "list_price": price,
                         "gross_sales": gross_sales,
