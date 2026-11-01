@@ -6,3 +6,15 @@ __pycache__/
 outputs/
 work/
 
+
+# Private finance data and local decisions
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+.data/
+uploads/
+private_data/
+exports/
+.pytest_cache/
