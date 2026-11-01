@@ -61,3 +61,12 @@ def test_gross_to_net_mismatch_blocks_profit():
     result = ingest_finance_files((("sales_2026.csv", payload(90, 100)),))
     assert result["stats"]["analysis_rows"] == 0
     assert result["issues"]["Issue / 问题"].str.contains("Net revenue formula mismatch").any()
+
+
+def test_identical_cross_source_values_still_require_ownership_resolution():
+    result = ingest_finance_files((
+        ("sales_team_2026.csv", payload()),
+        ("finance_team_2026.csv", payload()),
+    ))
+    assert result["stats"]["analysis_rows"] == 0
+    assert result["issues"]["Issue / 问题"].str.contains("Overlapping source ownership").any()
