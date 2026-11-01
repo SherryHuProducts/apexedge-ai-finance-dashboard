@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 
 from thin_slice import (
     AMAZON, B2B, GL_CONTROL, cents, connect, demo_run,
@@ -83,3 +84,22 @@ def test_optional_gl_absence_is_not_pass():
     result, _ = demo_run(gl_control=None)
     assert result["gl_status"] == "NOT SUPPLIED"
     assert result["monthly_finance_status"] == "NOT RECONCILED"
+
+
+def test_intentionally_broken_duplicate_file_is_rejected():
+    path = Path(__file__).parent / "fixtures/broken_amazon.csv"
+    with connect() as db:
+        with pytest.raises(ValueError, match="duplicate"):
+            ingest(db, "Amazon", path.read_text())
+        assert evaluate(db)["event_count"] == 0
+
+
+def test_intentionally_broken_settlement_is_detected_with_provenance():
+    path = Path(__file__).parent / "fixtures/settlement_mismatch.csv"
+    with connect() as db:
+        ingest(db, "Amazon", path.read_text(), path.name)
+        issue = evaluate(db)["settlement_issues"][0]
+        assert issue["difference_cents"] == -400
+        assert issue["category"] == "settlement_mismatch"
+        assert issue["source_row"] == 2
+        assert issue["source_file"] == path.name
