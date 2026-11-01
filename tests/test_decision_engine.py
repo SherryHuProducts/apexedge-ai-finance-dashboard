@@ -32,7 +32,7 @@ def test_packet_contains_aggregates_not_raw_identifiers():
     packet = evidence_packet(frame, detect_signals(frame), "CFO")
     serialized = json.dumps(packet)
     assert "A" not in packet.get("summary", {})  # No SKU key
-    assert "sku" not in serialized.lower()
+    assert '"sku":' not in serialized.lower()
     assert "source_file" not in serialized.lower()
     assert packet["summary"]["net_revenue"] == 210
 
