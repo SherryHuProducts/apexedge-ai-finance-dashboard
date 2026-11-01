@@ -12,6 +12,7 @@ from sales_dashboard import sales_page
 from decision_dashboard import decision_page
 from thin_slice_dashboard import thin_slice_page
 from multi_channel_dashboard import multi_channel_page
+from business_performance_dashboard import business_performance_page
 
 
 st.set_page_config(
@@ -42,7 +43,7 @@ def main() -> None:
             stats = pipeline_result["stats"]
             st.caption(f"{stats['files']} files · {stats['tables']} tables · {stats['analysis_rows']:,} analysis-ready rows")
         else:
-            demo_data = generate_demo_data()
+            demo_data = generate_demo_data(months_count=24)
             pipeline_result = demo_pipeline_result(demo_data)
             data = pipeline_result["canonical"].copy()
             st.caption("Demo case data / 使用演示案例数据")
@@ -86,6 +87,7 @@ def main() -> None:
         )
         if role.startswith("CFO"):
             page_options = [
+                "Business Performance / 经营业绩看板",
                 "Executive Overview / 管理层总览",
                 "Margin & Inventory / 毛利与库存",
                 "What-if Scenario / 情景模拟",
@@ -96,6 +98,7 @@ def main() -> None:
             ]
         else:
             page_options = [
+                "Business Performance / 经营业绩看板",
                 "Sales Workbench / 销售工作台",
                 "Decision Intelligence / 决策智能",
                 "Live Pipeline Demo / 财务数据闭环",
@@ -110,7 +113,7 @@ def main() -> None:
             key="navigation_" + ("cfo" if role.startswith("CFO") else "sales"),
         )
         st.divider()
-        if page != "Data Intake & Quality / 数据接入与质量" and not data.empty:
+        if page not in ("Data Intake & Quality / 数据接入与质量", "Business Performance / 经营业绩看板") and not data.empty:
             min_date = data["date"].min().date()
             max_date = data["date"].max().date()
             selected_dates = st.date_input("Date Range / 日期范围", value=(min_date, max_date), min_value=min_date, max_value=max_date)
@@ -139,6 +142,9 @@ def main() -> None:
 
     if page == "Data Intake & Quality / 数据接入与质量":
         data_quality_page(pipeline_result)
+        return
+    if page == "Business Performance / 经营业绩看板":
+        business_performance_page(data, pipeline_result, is_demo=not bool(uploaded_files))
         return
     if page == "Live Pipeline Demo / 财务数据闭环":
         thin_slice_page()
