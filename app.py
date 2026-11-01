@@ -249,13 +249,17 @@ def main():
         st.caption("Finance Intelligence / 财务智能系统")
         role=st.radio("View As / 角色",["CFO","Sales VP"],horizontal=True)
         page=st.radio("Workspace / 工作模块",["ERP Integration / ERP 集成",
-                        "Financial Reporting / 财务报告","Analysis & Planning / 分析与规划"])
+                        "Financial Reporting / 财务报告","Analysis & Planning / 分析与规划",
+                        "Organization & Workflow / 组织架构与流程"])
         st.divider()
         show_cases=st.toggle("Case Studies & Code / 案例与代码",value=False)
         st.caption("NO DATA / 尚无数据" if ready() is None else f"Validated records: {len(ready()):,}")
     if show_cases:cases()
     elif page.startswith("ERP"):integration()
     elif page.startswith("Financial"):report(role)
+    elif page.startswith("Organization"):
+        from organization_workflow_dashboard import organization_workflow_page
+        organization_workflow_page()
     else:analyze(role)
 
 if __name__=="__main__":
