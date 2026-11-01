@@ -2,6 +2,16 @@
 
 A bilingual CFO decision-support case for a consumer-electronics company with growing revenue and declining gross margin.
 
+## Project deliverables / 项目交付内容
+
+- [Architecture & Finance/Sales operating model](docs/architecture.md) — accounting responsibilities, canonical finance data, cost attribution and AI/human decision controls.
+- [Portfolio case study](docs/portfolio_case_study.md) — business problem, solution, tradeoffs and measured/testable artifacts.
+- [15-minute CFO & Sales presentation script](docs/presentation_script.md) — an interview-ready narrative with Q&A.
+- [Deployment guide](DEPLOYMENT.md) — Streamlit Community Cloud instructions and production-readiness checklist.
+- [Test evidence and limits](docs/test_evidence.md) — reproducible checks and honest scope.
+
+**Demo vs production:** ApexEdge is a fictional business, the included transactions are synthetic, and this is a decision-support prototype. No live ERP/CRM connection, durable access control, durable approval database or autonomous business execution is claimed. An optional GL control file is required for independent accounting reconciliation; until supplied, the status is **NOT SUPPLIED**, not PASS. Any optional AI explanation requires the user's explicit consent.
+
 ## Run locally
 
 ```bash
