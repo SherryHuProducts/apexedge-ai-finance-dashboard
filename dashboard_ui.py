@@ -5,6 +5,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from inventory_metrics import inventory_kpis, inventory_snapshot
+
 
 COLORS = {
     "ink": "#132238", "muted": "#66758A", "blue": "#2563EB", "cyan": "#0EA5E9",
@@ -121,17 +123,9 @@ def weighted_margin(frame: pd.DataFrame) -> float:
     return frame["gross_profit"].sum() / revenue * 100 if revenue else 0.0
 
 
-def inventory_metrics(frame: pd.DataFrame) -> tuple[float, float, float]:
-    if frame.empty:
-        return 0.0, 0.0, 0.0
-    monthly_inventory = frame.groupby("date")["inventory_value"].sum()
-    average_inventory = monthly_inventory.mean()
-    cogs = frame[["product_cost", "freight", "tariff"]].sum().sum()
-    months = max(frame["date"].nunique(), 1)
-    annualized_cogs = cogs * 12 / months
-    turns = annualized_cogs / average_inventory if average_inventory else 0.0
-    days = 365 / turns if turns else 0.0
-    return monthly_inventory.iloc[-1], turns, days
+def inventory_metrics(frame: pd.DataFrame) -> tuple[float | None, float | None, float | None]:
+    metrics = inventory_kpis(frame)
+    return metrics["inventory_value"], metrics["turnover"], metrics["inventory_days"]
 
 
 def hero(kicker: str, title: str, subtitle: str) -> None:
@@ -161,7 +155,7 @@ def executive_page(df: pd.DataFrame) -> None:
     with k3:
         metric_card("Contribution Profit", "贡献利润", money(current["contribution_profit"]), pct_change(current["contribution_profit"], previous["contribution_profit"]), "MoM / 环比", "◇")
     with k4:
-        metric_card("Inventory Days", "库存天数", f"{inventory_days:.0f} days", None, "estimate; MoM unavailable / 估算值，环比暂不可用", "◫", invert=True)
+        metric_card("Inventory Days", "库存天数", f"{inventory_days:.0f} days" if inventory_days is not None else "N/A", None, "month-end snapshot / 月末快照", "◫", invert=True)
 
     section_title("Performance Pulse", "经营脉搏", "Revenue growth vs. margin quality", "收入增长与利润质量")
     left, right = st.columns([1.58, 0.82])
@@ -264,15 +258,15 @@ def margin_inventory_page(df: pd.DataFrame) -> None:
     with k2:
         metric_card("Gross Margin", "毛利率", f"{margin:.1f}%", margin - prev_margin, "vs prior month / 对比上月", "◎", pp=True)
     with k3:
-        metric_card("Inventory Value", "库存金额", money(inventory_value), 0, f"as of {latest_month:%b %Y}", "◫", invert=True)
+        metric_card("Inventory Value", "库存金额", money(inventory_value) if inventory_value is not None else "N/A", None, f"as of {latest_month:%b %Y}", "◫", invert=True)
     with k4:
-        metric_card("Inventory Turnover", "库存周转", f"{turns:.2f}x", 0, f"{days:.0f} days / 天", "↻")
+        metric_card("Inventory Turnover", "库存周转", f"{turns:.2f}x" if turns is not None else "N/A", None, f"{days:.0f} days / 天" if days is not None else "insufficient data / 数据不足", "↻")
 
     aggregates = df.groupby(["sku", "product", "category"], as_index=False).agg(
         net_revenue=("net_revenue", "sum"), gross_profit=("gross_profit", "sum"),
         contribution_profit=("contribution_profit", "sum"), units=("units", "sum"), cogs=("product_cost", "sum"),
     )
-    inventory = latest_snapshot.groupby("sku", as_index=False).agg(inventory_value=("inventory_value", "sum"), inventory_units=("inventory_units", "sum"))
+    inventory = inventory_snapshot(latest_snapshot).groupby("sku", as_index=False).agg(inventory_value=("inventory_value", "sum"), inventory_units=("inventory_units", "sum"))
     sku = aggregates.merge(inventory, on="sku", how="left").fillna(0)
     sku["gross_margin"] = sku["gross_profit"] / sku["net_revenue"].where(sku["net_revenue"] != 0, 1) * 100
     months = max(df["date"].nunique(), 1)
