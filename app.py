@@ -9,6 +9,7 @@ from data_pipeline import demo_pipeline_result, ingest_finance_files
 from finance_data import generate_demo_data
 from gl_reconciliation import parse_gl_control_file, reconcile_gl
 from sales_dashboard import sales_page
+from decision_dashboard import decision_page
 
 
 st.set_page_config(
@@ -75,11 +76,13 @@ def main() -> None:
                 "Executive Overview / 管理层总览",
                 "Margin & Inventory / 毛利与库存",
                 "What-if Scenario / 情景模拟",
+                "Decision Intelligence / 决策智能",
                 "Data Intake & Quality / 数据接入与质量",
             ]
         else:
             page_options = [
                 "Sales Workbench / 销售工作台",
+                "Decision Intelligence / 决策智能",
                 "Data Intake & Quality / 数据接入与质量",
             ]
         page = st.radio(
@@ -140,6 +143,8 @@ def main() -> None:
         scenario_page(filtered)
     elif page == "Sales Workbench / 销售工作台":
         sales_page(filtered)
+    elif page == "Decision Intelligence / 决策智能":
+        decision_page(filtered, "CFO" if role.startswith("CFO") else "Sales")
 
 
 if __name__ == "__main__":
