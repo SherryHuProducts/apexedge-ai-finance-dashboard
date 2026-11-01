@@ -42,7 +42,10 @@ def inventory_kpis(frame: pd.DataFrame) -> dict[str, float | None]:
     if snapshots.empty:
         return {"inventory_value": None, "turnover": None, "inventory_days": None}
     monthly_stock = snapshots.groupby("date")["inventory_value"].sum(min_count=1)
-    latest_value = monthly_stock.sort_index().iloc[-1]
+    monthly_stock = monthly_stock.dropna().sort_index()
+    if monthly_stock.empty:
+        return {"inventory_value": None, "turnover": None, "inventory_days": None}
+    latest_value = monthly_stock.iloc[-1]
     month_cogs = frame.groupby("date")[["product_cost", "freight", "tariff"]].sum(min_count=1).sum(axis=1, min_count=3)
     matched = pd.concat([monthly_stock.rename("stock"), month_cogs.rename("cogs")], axis=1).dropna()
     matched = matched[matched["stock"] > 0]
