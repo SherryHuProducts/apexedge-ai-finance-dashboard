@@ -114,8 +114,8 @@ def ingest(db: sqlite3.Connection, channel: str, content: str,
     The same record_id with a newer source updated_at can revise a prior period.
     Out-of-order older snapshots cannot overwrite newer revisions.
     """
-    if channel not in {"Amazon", "B2B"}:
-        raise ValueError("Only the synthetic Amazon/B2B connectors are supported")
+    if channel not in {"Amazon", "B2B", "Walmart", "Costco"}:
+        raise ValueError("Only the synthetic Amazon/B2B/Walmart/Costco connectors are supported")
     rows = parse_csv(content, channel, source_name)
     changed = unchanged = stale = 0
     with db:
