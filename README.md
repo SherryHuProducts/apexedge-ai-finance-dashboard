@@ -92,3 +92,18 @@ Use the sidebar **Audience** selector:
 **Commercial promotion break-even:** the Sales view models an extra discount against current realized net selling price. It holds per-unit product/freight/tariff and marketing costs constant and lets percentage platform fees move with selling price. It computes the volume increase needed to preserve current contribution profit, **not** a demand forecast. It does not claim measured elasticity, advertising incrementality or causal uplift. When volume data is missing, the model is unavailable instead of inventing units.
 
 **Action queue:** relative return-rate and contribution-margin signals are deterministic triage priorities, not AI-generated investment advice. No prices, promotions or purchase orders are automatically changed.
+
+## Phase 4: Decision Intelligence / 决策智能
+
+Both CFO and Sales audiences can open **Decision Intelligence**:
+
+1. **Deterministic signals:** finance and commercial anomalies are calculated from the validated canonical dataset, with metric, baseline, observed value, difference, threshold and evidence. A signal is a review priority, **not proof of its cause**.
+2. **Optional live LLM explanation:** configure `OPENAI_API_KEY` in your local environment and optionally `OPENAI_MODEL` (default: `gpt-6-luna`). The app previews the exact outbound evidence and requires an explicit consent checkbox and Generate click. It sends only rounded aggregate KPIs and a few signal records, never raw uploaded spreadsheets, SKU identifiers, person names or transaction rows. The Responses API request uses `store: false` and a fixed HTTPS endpoint. Without a key, the app works fully in deterministic mode. API usage may incur charges; do not connect confidential employer data without authorization.
+3. **Human decision review:** creating a proposal never triggers a price, purchase-order, ERP or payment action. Allowed states: Proposed → Approved/Rejected → In progress → Completed/Rejected. Approval requires an owner; completion requires a measured result or documented outcome.
+4. **Event export:** proposals and review events are kept in Streamlit **session state only** in this MVP. Export the audit log CSV before the session ends. This is not a durable, enterprise audit store or authorization system.
+
+The app separates deterministic calculations, AI commentary and human approvals. Generated text must be reviewed and is not evidence of financial accuracy. `Decision Intelligence` does not perform automated execution.
+
+### Validation
+
+`tests/test_app_smoke.py` exercises the CFO landing page, Sales audience switch and Decision page through Streamlit's AppTest harness. The pure-function tests check accounting parity, signal evidence and decision-state transitions. CI workflow configuration exists, but a successful GitHub-hosted run should be confirmed in the repository Actions tab before claiming full end-to-end verification.
