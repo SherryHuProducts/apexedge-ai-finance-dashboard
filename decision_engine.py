@@ -72,7 +72,7 @@ def detect_signals(frame: pd.DataFrame) -> pd.DataFrame:
                     "evidence": "Channel returns / (gross sales - discounts); 10% is a demo triage threshold",
                     "suggested_review": "Review return reasons and SKU cohorts / 检查退货原因及 SKU",
                 })
-    return pd.DataFrame(rows)
+    return pd.DataFrame(rows, columns=["id", "audience", "severity", "signal", "metric", "observed", "baseline", "delta", "evidence", "suggested_review"])
 
 
 def evidence_packet(frame: pd.DataFrame, signals: pd.DataFrame, audience: str) -> dict:
