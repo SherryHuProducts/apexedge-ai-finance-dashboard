@@ -43,6 +43,8 @@ def connect(db_path: str = ":memory:") -> sqlite3.Connection:
         CREATE TABLE IF NOT EXISTS source_rows(
             channel TEXT NOT NULL,
             record_id TEXT NOT NULL,
+            source_file TEXT NOT NULL,
+            source_row INTEGER NOT NULL,
             order_date TEXT NOT NULL,
             order_id TEXT NOT NULL,
             sku TEXT NOT NULL,
@@ -69,13 +71,13 @@ def connect(db_path: str = ":memory:") -> sqlite3.Connection:
     return db
 
 
-def parse_csv(content: str, channel: str) -> list[dict]:
+def parse_csv(content: str, channel: str, source_name: str | None = None) -> list[dict]:
     reader = csv.DictReader(io.StringIO(content))
     if not reader.fieldnames or set(FIELDS) - set(reader.fieldnames):
         raise ValueError(f"{channel}: missing columns {sorted(set(FIELDS) - set(reader.fieldnames or []))}")
     seen: set[str] = set()
     rows = []
-    for raw in reader:
+    for source_row, raw in enumerate(reader, start=2):
         rid = (raw["record_id"] or "").strip()
         if not rid or rid in seen:
             raise ValueError(f"{channel}: blank or duplicate source record id {rid!r}")
@@ -87,6 +89,7 @@ def parse_csv(content: str, channel: str) -> list[dict]:
         if units <= 0:
             raise ValueError(f"{channel}: units must be positive")
         row = {"channel": channel, "record_id": rid,
+               "source_file": source_name or f"{channel.lower()}_synthetic.csv", "source_row": source_row,
                "order_date": raw["order_date"].strip(),
                "order_id": raw["source_order_id"].strip(),
                "sku": raw["sku"].strip(),
@@ -104,7 +107,8 @@ def parse_csv(content: str, channel: str) -> list[dict]:
     return rows
 
 
-def ingest(db: sqlite3.Connection, channel: str, content: str) -> dict:
+def ingest(db: sqlite3.Connection, channel: str, content: str,
+           source_name: str | None = None) -> dict:
     """Transactional upsert. A repeated identical run creates no new business rows/events.
 
     The same record_id with a newer source updated_at can revise a prior period.
@@ -112,7 +116,7 @@ def ingest(db: sqlite3.Connection, channel: str, content: str) -> dict:
     """
     if channel not in {"Amazon", "B2B"}:
         raise ValueError("Only the synthetic Amazon/B2B connectors are supported")
-    rows = parse_csv(content, channel)
+    rows = parse_csv(content, channel, source_name)
     changed = unchanged = stale = 0
     with db:
         for row in rows:
@@ -130,13 +134,14 @@ def ingest(db: sqlite3.Connection, channel: str, content: str) -> dict:
                 raise ValueError(f"{channel}: conflicting revision at the same updated_at for {row['record_id']}")
             event_type = "INSERT" if old is None else "BACKFILL_UPDATE"
             db.execute("""
-                INSERT INTO source_rows(channel,record_id,order_date,order_id,sku,customer_id,
+                INSERT INTO source_rows(channel,record_id,source_file,source_row,order_date,order_id,sku,customer_id,
                     net_sales_cents,units,fee_expected_cents,fee_actual_cents,settlement_net_cents,
                     updated_at,fingerprint)
-                VALUES(:channel,:record_id,:order_date,:order_id,:sku,:customer_id,
+                VALUES(:channel,:record_id,:source_file,:source_row,:order_date,:order_id,:sku,:customer_id,
                     :net_sales_cents,:units,:fee_expected_cents,:fee_actual_cents,:settlement_net_cents,
                     :updated_at,:fingerprint)
                 ON CONFLICT(channel,record_id) DO UPDATE SET
+                    source_file=excluded.source_file,source_row=excluded.source_row,
                     order_date=excluded.order_date, order_id=excluded.order_id,
                     sku=excluded.sku, customer_id=excluded.customer_id,
                     net_sales_cents=excluded.net_sales_cents, units=excluded.units,
@@ -160,12 +165,16 @@ def evaluate(db: sqlite3.Connection, gl_control: dict | None = None) -> dict:
         "net_sales_cents", "fee_actual_cents", "settlement_net_cents")}
     settlement_issues = [
         {"channel": r["channel"], "record_id": r["record_id"],
+         "source_file": r["source_file"], "source_row": r["source_row"],
+         "category": "settlement_mismatch", "status": "OPEN",
          "difference_cents": r["net_sales_cents"] - r["fee_actual_cents"] - r["settlement_net_cents"]}
         for r in rows
         if r["net_sales_cents"] - r["fee_actual_cents"] != r["settlement_net_cents"]
     ]
     fee_signals = [
         {"channel": r["channel"], "record_id": r["record_id"],
+         "source_file": r["source_file"], "source_row": r["source_row"],
+         "category": "fee_policy", "status": "OPEN",
          "expected_fee_cents": r["fee_expected_cents"], "actual_fee_cents": r["fee_actual_cents"],
          "difference_cents": r["fee_actual_cents"] - r["fee_expected_cents"],
          "evidence_fields": ["net_sales", "fee_expected", "fee_actual", "source_updated_at"]}
