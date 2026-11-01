@@ -66,12 +66,12 @@ var state=JSON.parse(JSON.stringify(defaults)),selected=null,drag=null;
 function current(){return state[mode.value]}function node(id){return current().nodes.find(function(n){return n.id===id})}
 function setStatus(m){document.getElementById("status").textContent=m}
 function draw(){
-board.querySelectorAll(".node").forEach(function(x){x.remove()});svg.innerHTML="";
+board.querySelectorAll(".node").forEach(function(x){x.remove()});svg.innerHTML='<defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#b5a99b"></path></marker></defs>';
 var rect=board.getBoundingClientRect(), W=rect.width,H=rect.height;
 current().edges.forEach(function(edge){var a=node(edge[0]),b=node(edge[1]);if(!a||!b)return;
 var x1=(a.x+90)/800*W,y1=(a.y+43)/640*H,x2=(b.x+90)/800*W,y2=(b.y+43)/640*H;
 var path=document.createElementNS("http://www.w3.org/2000/svg","path");
-path.setAttribute("class","link");path.setAttribute("d","M"+x1+","+y1+" Q"+((x1+x2)/2)+","+((y1+y2)/2-30)+" "+x2+","+y2);
+path.setAttribute("class","link");path.setAttribute("marker-end","url(#arrow)");path.setAttribute("d","M"+x1+","+y1+" Q"+((x1+x2)/2)+","+((y1+y2)/2-30)+" "+x2+","+y2);
 svg.appendChild(path)});
 current().nodes.forEach(function(n){
 var el=document.createElement("div");el.className="node "+(n.kind||"")+" "+(selected===n.id?"selected":"");el.dataset.id=n.id;
