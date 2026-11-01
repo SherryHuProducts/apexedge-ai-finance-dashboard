@@ -362,7 +362,9 @@ def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...]) -> dict[s
         return {"canonical": pd.DataFrame(), "staging": pd.DataFrame(), "sources": source_summary, "issues": issue_log, "coverage": pd.DataFrame(), "stats": {"files": file_count, "tables": len(summaries), "raw_rows": int(source_summary.get("Raw Rows / 原始行", pd.Series(dtype=float)).sum()), "clean_rows": 0, "analysis_rows": 0, "issues": len(issue_log)}}
 
     staging = pd.concat(cleaned_tables, ignore_index=True, sort=False)
-    duplicate_subset = [field for field in TEXT_FIELDS + NUMERIC_FIELDS if field in staging]
+    # Include source identity: identical values from two departments are not
+    # proof that one is a duplicate; source-ownership checks must see both.
+    duplicate_subset = [field for field in TEXT_FIELDS + NUMERIC_FIELDS + ["source_file", "source_sheet"] if field in staging]
     global_duplicates = staging.duplicated(subset=duplicate_subset, keep="first")
     if global_duplicates.any():
         issues.append(_issue("Warning / 警告", "Multiple files / 多文件", "n.a.", "Duplicate records found across files / 多文件之间存在重复记录", int(global_duplicates.sum()), "Confirm overlapping exports / 确认是否存在重复导出"))
