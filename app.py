@@ -10,6 +10,7 @@ from finance_data import generate_demo_data
 from gl_reconciliation import parse_gl_control_file, reconcile_gl
 from sales_dashboard import sales_page
 from decision_dashboard import decision_page
+from thin_slice_dashboard import thin_slice_page
 
 
 st.set_page_config(
@@ -88,12 +89,14 @@ def main() -> None:
                 "Margin & Inventory / 毛利与库存",
                 "What-if Scenario / 情景模拟",
                 "Decision Intelligence / 决策智能",
+                "Live Pipeline Demo / 财务数据闭环",
                 "Data Intake & Quality / 数据接入与质量",
             ]
         else:
             page_options = [
                 "Sales Workbench / 销售工作台",
                 "Decision Intelligence / 决策智能",
+                "Live Pipeline Demo / 财务数据闭环",
                 "Data Intake & Quality / 数据接入与质量",
             ]
         page = st.radio(
@@ -133,6 +136,9 @@ def main() -> None:
 
     if page == "Data Intake & Quality / 数据接入与质量":
         data_quality_page(pipeline_result)
+        return
+    if page == "Live Pipeline Demo / 财务数据闭环":
+        thin_slice_page()
         return
     if data.empty:
         st.error("No rows contain all fields required for profit analysis. Open Data Intake & Quality to review missing fields and join keys. / 没有记录同时具备利润分析所需字段，请前往“数据接入与质量”查看缺失字段和连接键。")
