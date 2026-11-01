@@ -7,6 +7,7 @@ import streamlit as st
 from dashboard_ui import CSS, data_quality_page, executive_page, margin_inventory_page, scenario_page
 from data_pipeline import demo_pipeline_result, ingest_finance_files
 from finance_data import generate_demo_data
+from gl_reconciliation import parse_gl_control_file, reconcile_gl
 
 
 st.set_page_config(
@@ -41,6 +42,25 @@ def main() -> None:
             pipeline_result = demo_pipeline_result(demo_data)
             data = pipeline_result["canonical"].copy()
             st.caption("Demo case data / 使用演示案例数据")
+
+        gl_file = st.file_uploader(
+            "GL Control Totals (optional) / 总账控制数（可选）",
+            type=["csv", "xlsx"],
+            help="Independent monthly GL totals with date, gl_net_revenue, gl_cogs, gl_inventory_value.",
+        )
+        pipeline_result["gl_status"] = "NOT SUPPLIED / 尚未提供"
+        pipeline_result["gl_recon"] = None
+        if gl_file is not None:
+            try:
+                gl = parse_gl_control_file(gl_file.name, gl_file.getvalue())
+                if data.empty:
+                    pipeline_result["gl_status"] = "BLOCKED / 无可分析数据"
+                else:
+                    pipeline_result["gl_recon"] = reconcile_gl(data, gl)
+                    statuses = pipeline_result["gl_recon"][[col for col in pipeline_result["gl_recon"].columns if col.endswith(" status")]]
+                    pipeline_result["gl_status"] = "PASS / 通过" if statuses.eq("PASS").all().all() else "FAIL / 存在差异"
+            except (ValueError, KeyError) as exc:
+                pipeline_result["gl_status"] = f"ERROR / 格式错误: {exc}"
 
         page_options = [
             "Executive Overview / 管理层总览",
