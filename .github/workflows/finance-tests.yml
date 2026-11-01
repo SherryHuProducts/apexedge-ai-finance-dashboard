@@ -1,0 +1,22 @@
+name: Finance controls tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt pytest
+      - name: Compile Python files
+        run: python -m compileall -q app.py dashboard_ui.py data_pipeline.py finance_data.py inventory_metrics.py tests
+      - name: Test financial controls
+        run: python -m pytest -q
