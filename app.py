@@ -98,7 +98,7 @@ architecture only, not deployed OLX integrations.
         valid=frame.loc[frame["revenue_ready"]].copy() if not frame.empty else frame
         st.session_state["olx_data"]=valid
         currency_values=valid["currency"].dropna().astype(str).str.upper().unique() if not valid.empty and "currency" in valid else []
-        st.session_state["olx_currency_symbol"]=({"GBP":"£","USD":"$","EUR":"€"}.get(currency_values[0],currency_values[0]+" ") if len(currency_values)==1 else "$")
+        st.session_state["olx_currency_symbol"]=({"GBP":"£","USD":"$","EUR":"€"}.get(currency_values[0],currency_values[0]+" ") if len(currency_values)==1 else "¤")
         st.session_state["olx_pipeline"]=result
         st.session_state["olx_gl"]="NOT SUPPLIED"
         st.session_state["olx_gl_table"]=None
