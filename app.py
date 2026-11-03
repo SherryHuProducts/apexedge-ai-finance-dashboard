@@ -24,7 +24,7 @@ def ready():
 def money(value):
     if value is None or pd.isna(value): return "N/A"
     symbol=st.session_state.get("olx_currency_symbol", "$")
-    return symbol+f"{value:,.0f}""
+    return symbol+f"{value:,.0f}"
 
 def empty(message):
     st.info("◇ "+message+" / 等待有效数据。请先进入 ERP Integration 上传文件。")
