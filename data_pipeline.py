@@ -221,7 +221,7 @@ def _clean_table(filename: str, sheet: str, raw: pd.DataFrame) -> tuple[pd.DataF
     # Split only when the first non-empty row has a clearly delimited header.
     if raw.shape[1] == 1:
         first = str(raw.iloc[0, 0])
-        for delimiter in (",", ";", "\\t", "|"):
+        for delimiter in (",", ";", "\t", "|"):
             try:
                 header = next(csv.reader([first], delimiter=delimiter))
             except csv.Error:
