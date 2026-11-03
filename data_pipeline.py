@@ -11,7 +11,7 @@ import pandas as pd
 import streamlit as st
 
 
-TEXT_FIELDS = ["date", "year", "month", "sku", "product", "category", "channel", "department"]
+TEXT_FIELDS = ["date", "year", "month", "sku", "product", "category", "channel", "department", "currency"]
 NUMERIC_FIELDS = [
     "units", "list_price", "gross_sales", "discount", "returns", "net_revenue", "product_cost",
     "freight", "tariff", "platform_fee", "marketing_spend", "inventory_units", "inventory_value",
@@ -30,6 +30,7 @@ ALIASES = {
     "product": ["product", "product name", "item name", "description", "商品", "产品", "产品名称", "商品名称", "品名"],
     "category": ["category", "product category", "item category", "business unit", "bu", "品类", "产品类别", "商品类别", "业务单元"],
     "channel": ["channel", "sales channel", "platform", "marketplace", "渠道", "销售渠道", "平台"],
+    "currency": ["currency", "currency code", "币种", "货币"],
     "department": ["department", "dept", "cost center", "function", "owner", "部门", "成本中心", "职能", "归属部门"],
     "units": ["units", "unit", "quantity", "qty", "sales volume", "volume", "销量", "数量", "销售数量", "件数"],
     "list_price": ["list price", "unit price", "price", "asp", "selling price", "标价", "单价", "售价", "平均售价"],
@@ -216,6 +217,28 @@ def _clean_table(filename: str, sheet: str, raw: pd.DataFrame) -> tuple[pd.DataF
         issues.append(_issue("Warning / 警告", filename, sheet, "Empty table / 空表", raw_rows, "Confirm the correct sheet / 确认正确工作表"))
         return None, summary, issues
 
+    # Excel exports sometimes store an entire CSV record in column A.
+    # Split only when the first non-empty row has a clearly delimited header.
+    if raw.shape[1] == 1:
+        first = str(raw.iloc[0, 0])
+        for delimiter in (",", ";", "\\t", "|"):
+            try:
+                header = next(csv.reader([first], delimiter=delimiter))
+            except csv.Error:
+                continue
+            hits = sum(normalize_label(part) in ALIAS_LOOKUP for part in header)
+            if len(header) >= 3 and hits >= 2:
+                parsed = list(csv.reader(
+                    [str(value) if pd.notna(value) else "" for value in raw.iloc[:, 0]],
+                    delimiter=delimiter,
+                ))
+                width = max(map(len, parsed))
+                raw = pd.DataFrame([row + [None] * (width - len(row)) for row in parsed])
+                issues.append(_issue("Info / 信息", filename, sheet,
+                    "Single-column delimited export expanded / 单列分隔文本已自动拆列",
+                    len(raw) - 1, "Confirm mapped headers and amounts / 复核字段及金额"))
+                break
+
     header_row = _header_row(raw)
     data = raw.iloc[header_row + 1:].copy()
     data.columns = _unique_headers(raw.iloc[header_row].tolist())
@@ -267,7 +290,7 @@ def _clean_table(filename: str, sheet: str, raw: pd.DataFrame) -> tuple[pd.DataF
             if invalid:
                 issues.append(_issue("Warning / 警告", filename, sheet, f"Invalid numeric values in {field} / {field} 存在无效数字", invalid, "Review currency, commas and text values / 复核币种、千分位和文本值"))
 
-    text_key_columns = [field for field in ("sku", "product", "category", "channel", "department") if field in cleaned]
+    text_key_columns = [field for field in ("sku", "product", "category", "channel", "department", "currency") if field in cleaned]
     total_mask = pd.Series(False, index=cleaned.index)
     if text_key_columns:
         combined_text = cleaned[text_key_columns].fillna("").astype(str).agg(" ".join, axis=1)
@@ -359,7 +382,7 @@ def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...]) -> dict[s
     source_summary = pd.DataFrame(summaries)
     issue_log = pd.DataFrame(issues)
     if not cleaned_tables:
-        return {"canonical": pd.DataFrame(), "staging": pd.DataFrame(), "sources": source_summary, "issues": issue_log, "coverage": pd.DataFrame(), "stats": {"files": file_count, "tables": len(summaries), "raw_rows": int(source_summary.get("Raw Rows / 原始行", pd.Series(dtype=float)).sum()), "clean_rows": 0, "analysis_rows": 0, "issues": len(issue_log)}}
+        return {"canonical": pd.DataFrame(), "staging": pd.DataFrame(), "sources": source_summary, "issues": issue_log, "coverage": pd.DataFrame(), "stats": {"files": file_count, "tables": len(summaries), "raw_rows": int(source_summary.get("Raw Rows / 原始行", pd.Series(dtype=float)).sum()), "clean_rows": 0, "analysis_rows": 0, "revenue_rows": 0, "issues": len(issue_log)}}
 
     staging = pd.concat(cleaned_tables, ignore_index=True, sort=False)
     # Include source identity: identical values from two departments are not
@@ -382,7 +405,7 @@ def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...]) -> dict[s
         else (lambda values: values.sum(min_count=1))
         for field in NUMERIC_FIELDS
     }
-    aggregation.update({"product": first_known, "category": first_known, "source_department": lambda s: ", ".join(sorted(set(map(str, s.dropna())))), "source_file": lambda s: ", ".join(sorted(set(map(str, s.dropna())))), "source_sheet": lambda s: ", ".join(sorted(set(map(str, s.dropna()))))})
+    aggregation.update({"product": first_known, "category": first_known, "source_department": lambda s: ", ".join(sorted(set(map(str, s.dropna())))), "source_file": lambda s: ", ".join(sorted(set(map(str, s.dropna())))), "source_sheet": lambda s: ", ".join(sorted(set(map(str, s.dropna())))), "currency": first_known})
     canonical = staging.groupby(KEY_FIELDS, dropna=False, as_index=False).agg(aggregation)
     # A shared metric in different files at the same grain might represent
     # overlapping extracts rather than additive transactions. Fail closed
@@ -420,6 +443,7 @@ def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...]) -> dict[s
             int(revenue_mismatch.sum()),
             "Review discounts, returns, period and gross-to-net mapping / 核对折扣、退货、期间和收入映射",
         ))
+    canonical["revenue_ready"] = canonical["net_revenue"].notna() & ~revenue_mismatch
     canonical["analysis_ready"] = canonical[REQUIRED_ANALYSIS_FIELDS].notna().all(axis=1) & ~revenue_mismatch
     canonical["gross_profit"] = pd.NA
     canonical["contribution_profit"] = pd.NA
@@ -450,6 +474,7 @@ def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...]) -> dict[s
         "raw_rows": int(source_summary["Raw Rows / 原始行"].sum()) if not source_summary.empty else 0,
         "clean_rows": len(staging),
         "analysis_rows": int(canonical["analysis_ready"].sum()),
+        "revenue_rows": int(canonical["revenue_ready"].sum()),
         "issues": len(issue_log),
     }
     return {"canonical": canonical, "staging": staging, "sources": source_summary, "issues": issue_log, "coverage": coverage, "stats": stats}
@@ -461,7 +486,8 @@ def demo_pipeline_result(data: pd.DataFrame) -> dict[str, Any]:
     canonical["source_sheet"] = "Generated fact table / 生成事实表"
     canonical["source_department"] = "Commercial Finance / 商业财务"
     canonical["analysis_ready"] = True
+    canonical["revenue_ready"] = True
     sources = pd.DataFrame([{"File / 文件": "Built-in demo / 内置演示", "Sheet / 工作表": "Generated fact table / 生成事实表", "Department / 部门": "Commercial Finance / 商业财务", "Raw Rows / 原始行": len(data), "Clean Rows / 清洗后行": len(data), "Header Row / 表头行": 1, "Mapped Fields / 已映射字段": ", ".join(TEXT_FIELDS + NUMERIC_FIELDS), "Unmapped / 未映射": "", "Period / 期间": f"{data['date'].min():%Y-%m} to {data['date'].max():%Y-%m}", "Status / 状态": "Ready / 可用"}])
     coverage = pd.DataFrame([{"Field / 字段": field, "Sources / 来源数": 1, "Source Coverage / 来源覆盖率": 1.0, "Non-null Rows / 非空行": int(data[field].notna().sum()) if field in data else 0, "Row Coverage / 行覆盖率": float(data[field].notna().mean()) if field in data else 0.0} for field in TEXT_FIELDS + NUMERIC_FIELDS])
-    return {"canonical": canonical, "staging": canonical.copy(), "sources": sources, "issues": pd.DataFrame(columns=["Severity / 严重性", "Source / 来源", "Sheet / 工作表", "Issue / 问题", "Rows / 行数", "Action / 建议"]), "coverage": coverage, "stats": {"files": 1, "tables": 1, "raw_rows": len(data), "clean_rows": len(data), "analysis_rows": len(data), "issues": 0}}
+    return {"canonical": canonical, "staging": canonical.copy(), "sources": sources, "issues": pd.DataFrame(columns=["Severity / 严重性", "Source / 来源", "Sheet / 工作表", "Issue / 问题", "Rows / 行数", "Action / 建议"]), "coverage": coverage, "stats": {"files": 1, "tables": 1, "raw_rows": len(data), "clean_rows": len(data), "analysis_rows": len(data), "revenue_rows": len(data), "issues": 0}}
 
