@@ -13,6 +13,8 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+**Upload robustness (2026-11):** Excel files that contain comma-/semicolon-/tab-delimited records in a single column are detected and expanded before mapping. Uploads show raw previews, source/field coverage and bilingual validation exceptions. Revenue-ready records can be reported even when product costs are missing; margin and contribution stay unavailable. Duplicate ownership of the same metric at the same month/SKU/channel grain blocks that metric. Financial statements must not be labeled reconciled until independent GL control succeeds. The three-file UCI sample includes a genuine sales export plus clearly marked synthetic cost and settlement data (GBP). Upload all three distinct source files, not two copies of the settlement file.
+
 **Data governance:** On uploading customer financials, verify confidentiality, allowed usage and access rights. Do not put actual business data or credentials into the public portfolio.
 
 See [Case Study Directory](case_studies/README.md). The older ApexEdge portfolio documentation below is retained as historical case-study reference and **does not describe the current default app navigation**.
