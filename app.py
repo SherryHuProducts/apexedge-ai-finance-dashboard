@@ -22,7 +22,9 @@ def ready():
     return data if isinstance(data,pd.DataFrame) and not data.empty else None
 
 def money(value):
-    return "N/A" if value is None or pd.isna(value) else "$"+f"{value:,.0f}"
+    if value is None or pd.isna(value): return "N/A"
+    symbol=st.session_state.get("olx_currency_symbol", "$")
+    return symbol+f"{value:,.0f}""
 
 def empty(message):
     st.info("◇ "+message+" / 等待有效数据。请先进入 ERP Integration 上传文件。")
@@ -80,39 +82,66 @@ architecture only, not deployed OLX integrations.
 """)
     files=st.file_uploader("Source reports / 上传来源文件",type=["csv","tsv","txt","xlsx","xls","xlsm"],
                            accept_multiple_files=True,key="olx_files")
+    if files:
+        with st.expander("Raw data preview / 原始数据预览",expanded=True):
+            from data_pipeline import _read_tables
+            for f in files:
+                try:
+                    for sheet,raw in _read_tables(f.name,f.getvalue()):
+                        st.markdown(f"**{f.name} / {sheet}**")
+                        st.dataframe(raw.head(6),hide_index=True,use_container_width=True)
+                except Exception as exc:
+                    st.warning(f"{f.name}: {exc}")
     if st.button("Validate & Load / 验证并加载",type="primary",disabled=not files):
         result=ingest_finance_files(tuple((f.name,f.getvalue()) for f in files))
         frame=result["canonical"]
-        valid=frame.loc[frame["analysis_ready"]].copy() if not frame.empty else frame
+        valid=frame.loc[frame["revenue_ready"]].copy() if not frame.empty else frame
         st.session_state["olx_data"]=valid
+        currency_values=valid["currency"].dropna().astype(str).str.upper().unique() if not valid.empty and "currency" in valid else []
+        st.session_state["olx_currency_symbol"]=({"GBP":"£","USD":"$","EUR":"€"}.get(currency_values[0],currency_values[0]+" ") if len(currency_values)==1 else "$")
         st.session_state["olx_pipeline"]=result
         st.session_state["olx_gl"]="NOT SUPPLIED"
         st.session_state["olx_gl_table"]=None
-        st.success(f"Loaded {len(valid):,} validated records. Review validation findings below.")
+        if len(valid):
+            st.success(f"Loaded {len(valid):,} revenue-ready records; {result['stats']['analysis_rows']:,} profit-ready.")
+        else:
+            st.error("No revenue-ready records. Check source headers and mapped fields / 未识别有效收入记录。")
     if st.button("Clear workspace / 清空数据"):
-        for key in ("olx_data","olx_pipeline","olx_gl","olx_gl_table"):st.session_state.pop(key,None)
+        for key in ("olx_data","olx_pipeline","olx_gl","olx_gl_table","olx_currency_symbol"):st.session_state.pop(key,None)
         st.rerun()
     result=st.session_state.get("olx_pipeline")
     if result is None:
         empty("No data loaded. Charts and KPIs will not appear until source validation.")
         return
-    a,b,c=st.columns(3)
+    a,b,c,d=st.columns(4)
     a.metric("Source Files",result["stats"]["files"])
-    b.metric("Analysis-ready Rows",result["stats"]["analysis_rows"])
-    c.metric("Validation Issues",result["stats"]["issues"])
+    b.metric("Revenue-ready Rows",result["stats"].get("revenue_rows",0))
+    c.metric("Profit-ready Rows",result["stats"]["analysis_rows"])
+    d.metric("Validation Issues",result["stats"]["issues"])
     st.subheader("Data Validation / 数据校验")
     if not result["issues"].empty:st.dataframe(result["issues"],hide_index=True,use_container_width=True)
     else:st.success("No ingestion exceptions detected.")
     with st.expander("Source inventory & lineage / 数据来源"):
         st.dataframe(result["sources"],hide_index=True,use_container_width=True)
+    with st.expander("Mapped fields and canonical records / 字段映射与标准数据"):
+        if not result["sources"].empty:
+            st.dataframe(result["sources"],hide_index=True,use_container_width=True)
+        if not result["coverage"].empty:
+            st.dataframe(result["coverage"],hide_index=True,use_container_width=True)
+        if not result["canonical"].empty:
+            st.dataframe(result["canonical"].head(100),hide_index=True,use_container_width=True)
     data=ready()
     if data is None:return
+    if not data["analysis_ready"].all():
+        st.warning("Revenue is available, but some costs are missing; profit KPIs remain unavailable / 收入可用，部分成本缺失，利润指标不可用。")
     st.subheader("GL Reconciliation / 总账勾稽")
     gl_file=st.file_uploader("Independent monthly GL control / 独立月度总账控制数",
                               type=["csv","xlsx"],key="olx_gl_file")
     if st.button("Reconcile / 执行勾稽",disabled=gl_file is None):
         try:
             gl=parse_gl_control_file(gl_file.name,gl_file.getvalue())
+            if not data["analysis_ready"].all():
+                raise ValueError("Missing costs: GL COGS reconciliation unavailable / 成本缺失，无法完整勾稽")
             recon=reconcile_gl(data,gl)
             statuses=recon[[c for c in recon if c.endswith(" status")]]
             st.session_state["olx_gl"]="PASS" if statuses.eq("PASS").all().all() else "FAIL"
@@ -209,6 +238,8 @@ def analyze(role):
         dimension=st.selectbox("Break down by / 按维度分析",dimensions)
         st.bar_chart(cur.groupby(dimension)[metric].sum(min_count=1).sort_values(ascending=False).head(20))
     st.subheader("Pricing & Scenario / 定价与情景模拟")
+    if cur["contribution_profit"].isna().any():
+        st.caption("Cost inputs incomplete: contribution scenarios unavailable / 成本不完整，利润情景不可用。")
     delta=st.slider("Hypothetical price change / 假设价格变动 (%)",-20,20,0)
     if all(x in cur and cur[x].notna().all() for x in ("net_revenue","contribution_profit")):
         base=float(cur["net_revenue"].sum())
