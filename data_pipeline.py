@@ -328,6 +328,8 @@ def _clean_table(filename: str, sheet: str, raw: pd.DataFrame) -> tuple[pd.DataF
             cleaned[field] = default
         else:
             cleaned[field] = cleaned[field].fillna(default).astype(str).str.strip().replace("", default)
+    if "currency" not in cleaned:
+        cleaned["currency"] = pd.NA
     for field in NUMERIC_FIELDS:
         if field not in cleaned:
             cleaned[field] = pd.NA
