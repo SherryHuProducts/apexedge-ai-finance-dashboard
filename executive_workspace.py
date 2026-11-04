@@ -228,8 +228,16 @@ def risk(data: pd.DataFrame | None, role: str) -> None:
                      format_func=lambda x:{"sku":"SKU","category":"Category","channel":"Channel"}[x])
     if dim not in cur:
         return st.warning("Alert dimension not supplied / 缺少分组维度")
-    columns={k:(k,lambda v:v.sum(min_count=1)) for k in ["net_revenue","gross_profit","inventory_units"] if k in cur}
+    columns={k:(k,lambda v:v.sum() if v.notna().all() else float("nan"))
+             for k in ["net_revenue","gross_profit"] if k in cur}
     grouped=cur.groupby(dim,dropna=False).agg(**columns).reset_index()
+    # Inventory is a point-in-time snapshot, never a sum across reporting months.
+    if "inventory_units" in cur:
+        latest=cur.loc[cur["date"]==cur["date"].max()]
+        stocks=latest.groupby(dim,dropna=False)["inventory_units"].agg(
+            lambda v:v.sum() if v.notna().all() else float("nan")
+        ).rename("inventory_units").reset_index()
+        grouped=grouped.merge(stocks,on=dim,how="left")
     findings=[]
     for _,row in grouped.iterrows():
         key=str(row[dim])
