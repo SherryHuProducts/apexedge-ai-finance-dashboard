@@ -289,16 +289,19 @@ def main():
         st.header("OLX")
         st.caption("Finance Intelligence / 财务智能系统")
         role=st.radio("View As / 角色",["CFO","Sales VP"],horizontal=True)
-        page=st.radio("Workspace / 工作模块",[
+        page=st.radio("Executive Dashboards / 管理看板",[
             "Executive Overview / 经营总览",
             "Performance Matrix / 经营表现",
             "Cash & Cost / 现金流与成本",
-            "Risk Monitor / 风险预警",
-            "ERP Integration / ERP 集成",
-            "Financial Reporting / 财务报告",
-            "Analysis & Planning / 分析与规划",
-            "Organization & Workflow / 组织架构与流程"])
+            "Risk Monitor / 风险预警"])
         st.divider()
+        show_tools=st.toggle("Data & System Tools / 数据与系统",value=False)
+        if show_tools:
+            page=st.radio("Tools / 工具",[
+                "ERP Integration / ERP 集成",
+                "Financial Reporting / 财务报告",
+                "Analysis & Planning / 分析与规划",
+                "Organization & Workflow / 组织架构与流程"])
         show_cases=st.toggle("Case Studies & Code / 案例与代码",value=False)
         st.caption("NO DATA / 尚无数据" if ready() is None else f"Validated records: {len(ready()):,}")
     if show_cases:cases()
