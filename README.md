@@ -1,10 +1,14 @@
 # OLX Finance Intelligence / OLX 财务智能系统
 
-**Default: empty financial workspace.** No synthetic revenue, margin, or analysis appears until the user uploads source reports and selects **Validate & Load** in **ERP Integration / ERP 集成**. The clean, white/cream CFO and Sales VP interface has three primary pages:
+**Default: empty financial workspace.** No synthetic revenue, margin, or analysis appears until the user uploads source reports and selects **Validate & Load** in **ERP Integration / ERP 集成**. The clean, white/cream CFO and Sales VP interface has four executive dashboards plus operational pages:
 
-1. **ERP Integration / ERP 集成** — source intake, validation, source audit, independent GL comparison and a documented extraction → canonical mapping → database → scheduling architecture. Live APIs, hosted DB and daily cron are **not** connected.
-2. **Financial Reporting / 财务报告** — period-filtered P&L, KPI comparisons, channel breakdown, source detail and separate GL status. Estimates/unallocated amounts are not invented.
-3. **Analysis & Planning / 分析与规划** — user-selected KPI trends, month/quarter/year variance, driver breakdown and an explicitly assumption-based pricing sensitivity.
+1. **Executive Overview / 经营总览** — revenue, gross margin direction, true net profit only when supplied, contribution profit separately, and revenue/cost concentration.
+2. **Performance Matrix / 经营表现** — channel/category/SKU comparisons, revenue, gross profit, contribution profit, sortable best/worst performers.
+3. **Cash & Cost / 现金与成本** — actual cash inflow/outflow when uploaded, marketplace settlement cash separately, cost structure and missing overhead disclosure.
+4. **Risk Monitor / 风险预警** — configurable gross-margin and inventory thresholds, open review list, inventory based on latest period snapshot.
+5. **ERP Integration / ERP 集成** — source intake, validation, source audit, independent GL comparison and a documented extraction → canonical mapping → database → scheduling architecture. Live APIs, hosted DB and daily cron are **not** connected.
+6. **Financial Reporting / 财务报告** — period-filtered P&L, KPI comparisons, channel breakdown, source detail and separate GL status. Estimates/unallocated amounts are not invented.
+7. **Analysis & Planning / 分析与规划** — user-selected KPI trends, month/quarter/year variance, driver breakdown and an explicitly assumption-based pricing sensitivity.
 
 Switch **View As / 角色** between **CFO** and **Sales VP**. Toggle **Case Studies & Code / 案例与代码** for synthetic portfolio demos, which are not part of the main workspace.
 
@@ -13,7 +17,11 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
+**Excel summary tabs:** In a workbook with several sheets, the uploader now lets users choose which sheets to load. It proposes a P&L/KPI/summary sheet and defaults to one to reduce accidental double counting. Other sheets can be opted in, but repeated metric ownership at the same monthly/SKU/channel grain remains a blocking exception. Do not load both a subtotal summary and its underlying transactions into the same fact grain.
+
 **Upload robustness (2026-11):** Excel files that contain comma-/semicolon-/tab-delimited records in a single column are detected and expanded before mapping. Uploads show raw previews, source/field coverage and bilingual validation exceptions. Revenue-ready records can be reported even when product costs are missing; margin and contribution stay unavailable. Duplicate ownership of the same metric at the same month/SKU/channel grain blocks that metric. Financial statements must not be labeled reconciled until independent GL control succeeds. The three-file UCI sample includes a genuine sales export plus clearly marked synthetic cost and settlement data (GBP). Upload all three distinct source files, not two copies of the settlement file.
+
+**Finance semantics:** Net profit is unavailable unless supplied as an approved net-income metric. Contribution profit does not equal GAAP net income. Settlement cash is not an operating cash-flow statement; inflows/outflows require independent cash source records. Inventory alert thresholds evaluate the latest month within the selected period; no unapproved inventory summation over time.
 
 **Data governance:** On uploading customer financials, verify confidentiality, allowed usage and access rights. Do not put actual business data or credentials into the public portfolio.
 
