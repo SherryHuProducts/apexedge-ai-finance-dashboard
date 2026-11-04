@@ -14,7 +14,7 @@ import streamlit as st
 TEXT_FIELDS = ["date", "year", "month", "sku", "product", "category", "channel", "department", "currency"]
 NUMERIC_FIELDS = [
     "units", "list_price", "gross_sales", "discount", "returns", "net_revenue", "product_cost",
-    "freight", "tariff", "platform_fee", "marketing_spend", "inventory_units", "inventory_value", "settlement_cash", "net_income", "cash_inflow", "cash_outflow",
+    "freight", "tariff", "platform_fee", "marketing_spend", "inventory_units", "inventory_value", "settlement_cash", "net_income", "cash_inflow", "cash_outflow", "gross_profit", "contribution_profit",
 ]
 REQUIRED_ANALYSIS_FIELDS = [
     "gross_sales", "discount", "returns", "net_revenue", "product_cost", "freight", "tariff",
@@ -45,6 +45,8 @@ ALIASES = {
     "marketing_spend": ["marketing", "marketing spend", "marketing cost", "ad spend", "advertising", "广告费", "营销费用", "市场费用", "推广费", "广告投入"],
     "inventory_units": ["inventory units", "inventory qty", "stock units", "on hand qty", "库存数量", "库存量", "现有库存", "期末库存数量"],
     "settlement_cash": ["settlement cash", "net settlement", "payout amount", "settled amount", "结算到账", "平台结算净额"],
+    "gross_profit": ["gross profit", "gross earnings", "毛利润", "毛利"],
+    "contribution_profit": ["contribution profit", "contribution margin dollars", "contribution income", "贡献利润", "贡献毛利"],
     "net_income": ["net income", "net profit", "profit after tax", "净利润", "税后利润"],
     "cash_inflow": ["cash inflow", "cash receipts", "cash received", "现金流入", "收到现金"],
     "cash_outflow": ["cash outflow", "cash payments", "cash paid", "现金流出", "支付现金"],
@@ -452,12 +454,42 @@ def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...], selected_
             "Review discounts, returns, period and gross-to-net mapping / 核对折扣、退货、期间和收入映射",
         ))
     canonical["revenue_ready"] = canonical["net_revenue"].notna() & ~revenue_mismatch
-    canonical["analysis_ready"] = canonical[REQUIRED_ANALYSIS_FIELDS].notna().all(axis=1) & ~revenue_mismatch
-    canonical["gross_profit"] = pd.NA
-    canonical["contribution_profit"] = pd.NA
-    ready = canonical["analysis_ready"]
-    canonical.loc[ready, "gross_profit"] = canonical.loc[ready, "net_revenue"] - canonical.loc[ready, "product_cost"] - canonical.loc[ready, "freight"] - canonical.loc[ready, "tariff"]
-    canonical.loc[ready, "contribution_profit"] = canonical.loc[ready, "gross_profit"] - canonical.loc[ready, "platform_fee"] - canonical.loc[ready, "marketing_spend"]
+    # Official P&L summaries can supply gross/contribution profit directly.
+    # Derive those amounts only when all component inputs exist; do not infer
+    # absent freight, duties or fees to be zero.
+    gross_input = canonical["gross_profit"].copy()
+    contribution_input = canonical["contribution_profit"].copy()
+    gross_components = canonical["revenue_ready"] & canonical[
+        ["product_cost", "freight", "tariff"]
+    ].notna().all(axis=1)
+    computed_gross = (canonical["net_revenue"] - canonical["product_cost"]
+                      - canonical["freight"] - canonical["tariff"])
+    gross_conflict = gross_components & gross_input.notna() & (
+        (gross_input - computed_gross).abs() > 0.01
+    )
+    if gross_conflict.any():
+        issues.append(_issue("Critical / 严重", "Combined dataset / 合并数据", "n.a.",
+                             "Gross profit summary disagrees with cost bridge / 汇总毛利与成本计算不符",
+                             int(gross_conflict.sum()), "Review approved P&L and detailed cost sources / 核对利润表及成本来源"))
+    canonical["gross_profit"] = gross_input.where(gross_input.notna(), computed_gross.where(gross_components))
+    canonical.loc[gross_conflict, "gross_profit"] = float("nan")
+    contribution_components = canonical["gross_profit"].notna() & canonical[
+        ["platform_fee", "marketing_spend"]
+    ].notna().all(axis=1)
+    computed_contribution = (canonical["gross_profit"] - canonical["platform_fee"]
+                             - canonical["marketing_spend"])
+    contribution_conflict = contribution_components & contribution_input.notna() & (
+        (contribution_input - computed_contribution).abs() > 0.01
+    )
+    if contribution_conflict.any():
+        issues.append(_issue("Critical / 严重", "Combined dataset / 合并数据", "n.a.",
+                             "Contribution profit summary disagrees with fees / 汇总贡献利润与费用计算不符",
+                             int(contribution_conflict.sum()), "Review summary and fee sources / 核对汇总及费用来源"))
+    canonical["contribution_profit"] = contribution_input.where(
+        contribution_input.notna(), computed_contribution.where(contribution_components))
+    canonical.loc[contribution_conflict, "contribution_profit"] = float("nan")
+    canonical["analysis_ready"] = (canonical["revenue_ready"] &
+        canonical["gross_profit"].notna() & canonical["contribution_profit"].notna())
     canonical["gross_profit"] = pd.to_numeric(canonical["gross_profit"], errors="coerce")
     canonical["contribution_profit"] = pd.to_numeric(canonical["contribution_profit"], errors="coerce")
 
