@@ -14,7 +14,7 @@ import streamlit as st
 TEXT_FIELDS = ["date", "year", "month", "sku", "product", "category", "channel", "department", "currency"]
 NUMERIC_FIELDS = [
     "units", "list_price", "gross_sales", "discount", "returns", "net_revenue", "product_cost",
-    "freight", "tariff", "platform_fee", "marketing_spend", "inventory_units", "inventory_value",
+    "freight", "tariff", "platform_fee", "marketing_spend", "inventory_units", "inventory_value", "settlement_cash", "net_income", "cash_inflow", "cash_outflow",
 ]
 REQUIRED_ANALYSIS_FIELDS = [
     "gross_sales", "discount", "returns", "net_revenue", "product_cost", "freight", "tariff",
@@ -44,6 +44,10 @@ ALIASES = {
     "platform_fee": ["platform fee", "platform fees", "marketplace fee", "commission", "selling fee", "平台费", "渠道费", "佣金", "销售佣金"],
     "marketing_spend": ["marketing", "marketing spend", "marketing cost", "ad spend", "advertising", "广告费", "营销费用", "市场费用", "推广费", "广告投入"],
     "inventory_units": ["inventory units", "inventory qty", "stock units", "on hand qty", "库存数量", "库存量", "现有库存", "期末库存数量"],
+    "settlement_cash": ["settlement cash", "net settlement", "payout amount", "settled amount", "结算到账", "平台结算净额"],
+    "net_income": ["net income", "net profit", "profit after tax", "净利润", "税后利润"],
+    "cash_inflow": ["cash inflow", "cash receipts", "cash received", "现金流入", "收到现金"],
+    "cash_outflow": ["cash outflow", "cash payments", "cash paid", "现金流出", "支付现金"],
     "inventory_value": ["inventory value", "inventory balance", "stock value", "ending inventory", "库存金额", "库存价值", "期末库存", "存货余额"],
 }
 
@@ -362,7 +366,7 @@ def _clean_table(filename: str, sheet: str, raw: pd.DataFrame) -> tuple[pd.DataF
 
 
 @st.cache_data(show_spinner=False)
-def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...]) -> dict[str, Any]:
+def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...], selected_sheets: tuple[str, ...] | None = None) -> dict[str, Any]:
     summaries: list[dict[str, Any]] = []
     issues: list[dict[str, Any]] = []
     cleaned_tables: list[pd.DataFrame] = []
@@ -375,6 +379,8 @@ def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...]) -> dict[s
             summaries.append({"File / 文件": filename, "Sheet / 工作表": "n.a.", "Department / 部门": _infer_department(filename), "Raw Rows / 原始行": 0, "Clean Rows / 清洗后行": 0, "Header Row / 表头行": "n.a.", "Mapped Fields / 已映射字段": "", "Unmapped / 未映射": "", "Period / 期间": "n.a.", "Status / 状态": "Blocked / 阻断"})
             continue
         for sheet, raw in tables:
+            if selected_sheets is not None and f"{filename}::{sheet}" not in selected_sheets:
+                continue
             cleaned, summary, table_issues = _clean_table(filename, sheet, raw)
             summaries.append(summary)
             issues.extend(table_issues)
