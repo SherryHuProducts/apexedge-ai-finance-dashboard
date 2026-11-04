@@ -82,18 +82,28 @@ architecture only, not deployed OLX integrations.
 """)
     files=st.file_uploader("Source reports / 上传来源文件",type=["csv","tsv","txt","xlsx","xls","xlsm"],
                            accept_multiple_files=True,key="olx_files")
+    selected_sheet_ids=[]
     if files:
-        with st.expander("Raw data preview / 原始数据预览",expanded=True):
+        with st.expander("Choose summary tabs & preview / 选择汇总工作表与预览",expanded=True):
             from data_pipeline import _read_tables
             for f in files:
                 try:
-                    for sheet,raw in _read_tables(f.name,f.getvalue()):
-                        st.markdown(f"**{f.name} / {sheet}**")
-                        st.dataframe(raw.head(6),hide_index=True,use_container_width=True)
+                    sheets=_read_tables(f.name,f.getvalue())
+                    names=[name for name,_ in sheets]
+                    preferred=[name for name in names if any(token in name.lower().replace("_"," ") for token in
+                               ("p&l","pnl","profit","income statement","financial summary","kpi","metrics","summary","汇总","利润","损益","指标"))]
+                    default=preferred if preferred else names
+                    chosen=st.multiselect(f"{f.name} — Worksheet(s) / 工作表",names,default=default,key=f"olx_sheet_{f.name}")
+                    st.caption("Select only authoritative summary tabs. Avoid selecting both detailed and summarized versions of the same figures / 避免重复计入明细与汇总。")
+                    for sheet,raw in sheets:
+                        if sheet in chosen:
+                            selected_sheet_ids.append(f"{f.name}::{sheet}")
+                            st.markdown(f"**{sheet}** · {len(raw):,} raw rows")
+                            st.dataframe(raw.head(6),hide_index=True,use_container_width=True)
                 except Exception as exc:
                     st.warning(f"{f.name}: {exc}")
-    if st.button("Validate & Load / 验证并加载",type="primary",disabled=not files):
-        result=ingest_finance_files(tuple((f.name,f.getvalue()) for f in files))
+    if st.button("Validate & Load / 验证并加载",type="primary",disabled=not selected_sheet_ids):
+        result=ingest_finance_files(tuple((f.name,f.getvalue()) for f in files),tuple(selected_sheet_ids))
         frame=result["canonical"]
         valid=frame.loc[frame["revenue_ready"]].copy() if not frame.empty else frame
         st.session_state["olx_data"]=valid
@@ -279,13 +289,31 @@ def main():
         st.header("OLX")
         st.caption("Finance Intelligence / 财务智能系统")
         role=st.radio("View As / 角色",["CFO","Sales VP"],horizontal=True)
-        page=st.radio("Workspace / 工作模块",["ERP Integration / ERP 集成",
-                        "Financial Reporting / 财务报告","Analysis & Planning / 分析与规划",
-                        "Organization & Workflow / 组织架构与流程"])
+        page=st.radio("Workspace / 工作模块",[
+            "Executive Overview / 经营总览",
+            "Performance Matrix / 经营表现",
+            "Cash & Cost / 现金流与成本",
+            "Risk Monitor / 风险预警",
+            "ERP Integration / ERP 集成",
+            "Financial Reporting / 财务报告",
+            "Analysis & Planning / 分析与规划",
+            "Organization & Workflow / 组织架构与流程"])
         st.divider()
         show_cases=st.toggle("Case Studies & Code / 案例与代码",value=False)
         st.caption("NO DATA / 尚无数据" if ready() is None else f"Validated records: {len(ready()):,}")
     if show_cases:cases()
+    elif page.startswith("Executive"):
+        from executive_workspace import overview
+        overview(ready(),role)
+    elif page.startswith("Performance"):
+        from executive_workspace import matrix
+        matrix(ready(),role)
+    elif page.startswith("Cash"):
+        from executive_workspace import cash_cost
+        cash_cost(ready(),role)
+    elif page.startswith("Risk"):
+        from executive_workspace import risk
+        risk(ready(),role)
     elif page.startswith("ERP"):integration()
     elif page.startswith("Financial"):report(role)
     elif page.startswith("Organization"):
