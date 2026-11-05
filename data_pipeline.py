@@ -96,8 +96,10 @@ def _unique_headers(values: list[Any]) -> list[str]:
     headers = []
     for idx, value in enumerate(values):
         base = normalize_label(value) or f"unnamed_{idx + 1}"
+        original = str(value).strip() if pd.notna(value) else ""
+        original = original or f"unnamed_{idx + 1}"
         seen[base] = seen.get(base, 0) + 1
-        headers.append(base if seen[base] == 1 else f"{base}_{seen[base]}")
+        headers.append(original if seen[base] == 1 else f"{original}_{seen[base]}")
     return headers
 
 
