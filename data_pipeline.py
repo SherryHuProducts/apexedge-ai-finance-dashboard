@@ -14,7 +14,7 @@ import streamlit as st
 TEXT_FIELDS = ["date", "year", "month", "sku", "product", "category", "channel", "department", "currency"]
 NUMERIC_FIELDS = [
     "units", "list_price", "gross_sales", "discount", "returns", "net_revenue", "product_cost",
-    "freight", "tariff", "platform_fee", "marketing_spend", "inventory_units", "inventory_value", "settlement_cash", "net_income", "cash_inflow", "cash_outflow", "gross_profit", "contribution_profit",
+    "freight", "tariff", "platform_fee", "marketing_spend", "inventory_units", "inventory_value", "settlement_cash", "net_income", "cash_inflow", "cash_outflow", "gross_profit", "contribution_profit", "ebitda", "orders", "inventory_days", "ending_cash", "operating_expenses", "warehousing", "outbound_shipping",
 ]
 REQUIRED_ANALYSIS_FIELDS = [
     "gross_sales", "discount", "returns", "net_revenue", "product_cost", "freight", "tariff",
@@ -45,6 +45,13 @@ ALIASES = {
     "marketing_spend": ["marketing", "marketing spend", "marketing cost", "ad spend", "advertising", "广告费", "营销费用", "市场费用", "推广费", "广告投入"],
     "inventory_units": ["inventory units", "inventory qty", "stock units", "on hand qty", "库存数量", "库存量", "现有库存", "期末库存数量"],
     "settlement_cash": ["settlement cash", "net settlement", "payout amount", "settled amount", "结算到账", "平台结算净额"],
+    "ebitda": ["ebitda", "adjusted ebitda", "息税折旧摊销前利润"],
+    "orders": ["orders", "order count", "number of orders", "订单数", "订单量"],
+    "inventory_days": ["inventory days", "dio", "days inventory outstanding", "存货周转天数", "库存周转天数"],
+    "ending_cash": ["ending cash", "cash balance", "closing cash", "期末现金", "现金余额"],
+    "operating_expenses": ["operating expenses", "opex", "total operating expenses", "运营费用", "经营费用", "营业费用合计"],
+    "warehousing": ["warehousing", "3pl", "storage cost", "仓储费", "第三方仓储费"],
+    "outbound_shipping": ["outbound shipping", "last mile shipping", "delivery cost", "尾程物流", "尾程运费"],
     "gross_profit": ["gross profit", "gross earnings", "毛利润", "毛利"],
     "contribution_profit": ["contribution profit", "contribution margin dollars", "contribution income", "贡献利润", "贡献毛利"],
     "net_income": ["net income", "net profit", "profit after tax", "净利润", "税后利润"],
