@@ -113,7 +113,15 @@ def overview(data: pd.DataFrame | None,role: str):
             st.bar_chart(channels.head(12))
             top=channels.index[0]
             st.caption(f"Leading revenue channel: {top} / 收入最大渠道")
-        else:st.info("No channel breakdown in the selected summary / 汇总文件未提供渠道维度。")
+        else:
+            segments=st.session_state.get("olx_segments",{})
+            ytd=segments.get("channel")
+            if isinstance(ytd,pd.DataFrame) and not ytd.empty:
+                st.caption("YTD channel summary — separate reporting scope / 本年累计渠道汇总，非所选月份")
+                st.bar_chart(ytd.set_index("channel")["revenue"].sort_values(ascending=False))
+                st.dataframe(ytd,hide_index=True,use_container_width=True)
+                st.caption("Channel contribution costs may be estimated allocations in the source workbook.")
+            else:st.info("No channel breakdown in the selected summary / 汇总文件未提供渠道维度。")
     with b:
         if margin is not None and _margin(prior) is not None and margin<_margin(prior):
             st.warning(f"Gross margin declined {(_margin(prior)-margin)*100:.1f} pp / 毛利率下滑")
@@ -148,7 +156,23 @@ def margin_inventory(data: pd.DataFrame | None,role: str):
     metric=b.selectbox("Ranking metric / 排序指标",list(metric_choices),format_func=lambda x:metric_choices[x])
     floor=c.number_input("Min gross margin alert % / 毛利警戒线",min_value=-100.0,max_value=100.0,value=20.0,step=1.0)
     sub=_available_rows(cur,dim)
-    if sub.empty:return st.info("Selected source has no channel/category/SKU detail / 所选来源未提供该分析维度。")
+    if sub.empty:
+        segments=st.session_state.get("olx_segments",{})
+        snapshot=segments.get(dim)
+        if isinstance(snapshot,pd.DataFrame) and not snapshot.empty:
+            st.subheader("YTD segment summary / 本年累计分类汇总")
+            st.caption("This independently extracted summary has a YTD scope; it is not filtered by the period above / 与上方月份筛选不同。")
+            if dim=="channel":
+                st.bar_chart(snapshot.set_index("channel")["contribution_profit"])
+                st.dataframe(snapshot.sort_values("contribution_profit",ascending=False),
+                             hide_index=True,use_container_width=True)
+                st.caption("Some channel costs are allocation estimates in the uploaded workbook / 部分渠道费用为估计分摊。")
+            else:
+                st.bar_chart(snapshot.set_index("category")["product_gross_margin_pct"])
+                st.dataframe(snapshot,hide_index=True,use_container_width=True)
+                st.caption("Product gross margin excludes allocated overhead / 品类商品毛利率不等于净利润率。")
+            return
+        return st.info("Selected source has no channel/category/SKU detail / 所选来源未提供该分析维度。")
     cols={k:(k,lambda v:v.sum() if v.notna().all() else float("nan"))
           for k in ("net_revenue","gross_profit","contribution_profit","units","product_cost","freight","tariff") if k in sub}
     grouped=sub.groupby(dim,dropna=False).agg(**cols).reset_index()
