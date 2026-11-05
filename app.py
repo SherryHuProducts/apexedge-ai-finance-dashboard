@@ -92,7 +92,8 @@ architecture only, not deployed OLX integrations.
                     names=[name for name,_ in sheets]
                     preferred=[name for name in names if any(token in name.lower().replace("_"," ") for token in
                                ("p&l","pnl","profit","income statement","financial summary","kpi","metrics","summary","汇总","利润","损益","指标"))]
-                    default=preferred[:1] if preferred else names[:1]
+                    calculation_base=[name for name in names if ("月度数据" in name or "monthly data" in name.lower())]
+                    default=calculation_base[:1] if calculation_base else preferred[:1] if preferred else names[:1]
                     chosen=st.multiselect(f"{f.name} — Worksheet(s) / 工作表",names,default=default,key=f"olx_sheet_{f.name}")
                     st.caption("Select only authoritative summary tabs. Avoid selecting both detailed and summarized versions of the same figures / 避免重复计入明细与汇总。")
                     for sheet,raw in sheets:
