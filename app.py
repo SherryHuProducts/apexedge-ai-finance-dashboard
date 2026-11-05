@@ -111,6 +111,19 @@ architecture only, not deployed OLX integrations.
         currency_values=valid["currency"].dropna().astype(str).str.upper().unique() if not valid.empty and "currency" in valid else []
         st.session_state["olx_currency_symbol"]=({"GBP":"£","USD":"$","EUR":"€"}.get(currency_values[0],currency_values[0]+" ") if len(currency_values)==1 else "¤")
         st.session_state["olx_pipeline"]=result
+        from summary_extract import extract_segment_summaries
+        segments={}
+        for file in files:
+            try:
+                extracted=extract_segment_summaries(file.name,file.getvalue())
+                for dimension,summary in extracted.items():
+                    if dimension in segments:
+                        st.warning(f"Multiple {dimension} summaries supplied; only first retained for review / 多份汇总来源需确认")
+                    else:
+                        segments[dimension]=summary
+            except Exception as exc:
+                st.warning(f"Optional segment summary unavailable for {file.name}: {exc}")
+        st.session_state["olx_segments"]=segments
         st.session_state["olx_gl"]="NOT SUPPLIED"
         st.session_state["olx_gl_table"]=None
         if len(valid):
@@ -118,7 +131,7 @@ architecture only, not deployed OLX integrations.
         else:
             st.error("No revenue-ready records. Check source headers and mapped fields / 未识别有效收入记录。")
     if st.button("Clear workspace / 清空数据"):
-        for key in ("olx_data","olx_pipeline","olx_gl","olx_gl_table","olx_currency_symbol"):st.session_state.pop(key,None)
+        for key in ("olx_data","olx_pipeline","olx_gl","olx_gl_table","olx_currency_symbol","olx_segments"):st.session_state.pop(key,None)
         st.rerun()
     result=st.session_state.get("olx_pipeline")
     if result is None:
