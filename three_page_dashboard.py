@@ -235,15 +235,18 @@ def scenario(data: pd.DataFrame | None,role: str):
     c.metric("Contribution Profit / 贡献利润",money(cp))
     st.subheader("02 · Assumptions / 假设条件")
     a,b,c=st.columns(3)
-    price=a.slider("Price change / 调价 (%)",-20.0,30.0,3.0,0.5)/100
+    price=a.slider("Price change / 调价 (%)",-20.0,30.0,0.0,0.5)/100
     elasticity=b.slider("Price elasticity / 价格弹性",-3.0,0.0,-1.2,0.1)
     return_delta=c.slider("Extra return rate / 退货率额外变化 (pp)",-5.0,10.0,0.0,0.5)/100
     d,e,f=st.columns(3)
-    platform_delta=d.slider("Platform fee rate change / 平台费率变化 (pp)",-5.0,10.0,-2.0,0.5)/100
+    platform_delta=d.slider("Platform fee rate change / 平台费率变化 (pp)",-5.0,10.0,0.0,0.5)/100
+    baseline_product=value(cur,"product_cost")
+    baseline_tariff=value(cur,"tariff")
+    current_tariff=round(max(0.0,min(100.0,baseline_tariff/baseline_product*100)),1) if baseline_product and baseline_tariff is not None else 0.0
     tariff_new=e.number_input("New tariff rate on product cost / 新关税率 (%)",
-                              min_value=0.0,max_value=100.0,value=15.0,step=1.0)/100
+                              min_value=0.0,max_value=100.0,value=current_tariff,step=1.0)/100
     ad_mode=f.radio("Advertising assumption / 广告假设",["Keep spend / 金额不变","Keep rate / 费率不变"],horizontal=False)
-    st.caption("Elasticity and tariff default values are illustrative assumptions, NOT inferred from uploaded records. / 弹性与关税初始值只是情景假设。")
+    st.caption("Price and fee changes start at zero. Tariff starts from uploaded cost ratio when available; elasticity is a hypothetical assumption, not an estimate / 调价与费率变动默认零，关税基准来自来源金额，弹性是假设。")
     volume_factor=(1+price)**elasticity
     new_revenue=rev*(1+price)*volume_factor*(1-return_delta)
     st.subheader("03 · Financial Impact / 情景结果")
