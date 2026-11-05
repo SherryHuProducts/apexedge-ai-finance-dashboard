@@ -14,7 +14,7 @@ import streamlit as st
 TEXT_FIELDS = ["date", "year", "month", "sku", "product", "category", "channel", "department", "currency"]
 NUMERIC_FIELDS = [
     "units", "list_price", "gross_sales", "discount", "returns", "net_revenue", "product_cost",
-    "freight", "tariff", "platform_fee", "marketing_spend", "inventory_units", "inventory_value", "settlement_cash", "net_income", "cash_inflow", "cash_outflow", "gross_profit", "contribution_profit", "ebitda", "orders", "inventory_days", "ending_cash", "operating_expenses", "warehousing", "outbound_shipping",
+    "freight", "tariff", "platform_fee", "marketing_spend", "inventory_units", "inventory_value", "settlement_cash", "net_income", "cash_inflow", "cash_outflow", "gross_profit", "contribution_profit", "ebitda", "orders", "inventory_days", "ending_cash", "operating_expenses", "warehousing", "outbound_shipping", "other_cogs", "operating_cash_flow", "free_cash_flow",
 ]
 REQUIRED_ANALYSIS_FIELDS = [
     "gross_sales", "discount", "returns", "net_revenue", "product_cost", "freight", "tariff",
@@ -39,9 +39,9 @@ ALIASES = {
     "returns": ["returns", "return amount", "refunds", "sales returns", "退货", "退款", "退货金额", "销售退回"],
     "net_revenue": ["net revenue", "revenue", "sales", "net sales", "amount", "actual revenue", "净收入", "营业收入", "销售额", "净销售额", "收入", "实际收入"],
     "product_cost": ["product cost", "cogs", "cost of goods sold", "material cost", "standard cost", "成本", "产品成本", "销售成本", "主营业务成本", "物料成本", "标准成本"],
-    "freight": ["freight", "shipping", "shipping cost", "logistics", "logistics cost", "运费", "物流费", "运输成本", "物流成本"],
+    "freight": ["inbound freight", "freight", "shipping", "shipping cost", "logistics", "logistics cost", "运费", "物流费", "运输成本", "物流成本"],
     "tariff": ["tariff", "tariffs", "duty", "duties", "customs", "关税", "进口税", "海关税费"],
-    "platform_fee": ["platform fee", "platform fees", "marketplace fee", "commission", "selling fee", "平台费", "渠道费", "佣金", "销售佣金"],
+    "platform_fee": ["marketplace & payment fees", "marketplace fees", "payment fees", "platform fee", "platform fees", "marketplace fee", "commission", "selling fee", "平台费", "渠道费", "佣金", "销售佣金"],
     "marketing_spend": ["marketing", "marketing spend", "marketing cost", "ad spend", "advertising", "广告费", "营销费用", "市场费用", "推广费", "广告投入"],
     "inventory_units": ["inventory units", "inventory qty", "stock units", "on hand qty", "库存数量", "库存量", "现有库存", "期末库存数量"],
     "settlement_cash": ["settlement cash", "net settlement", "payout amount", "settled amount", "结算到账", "平台结算净额"],
@@ -52,6 +52,9 @@ ALIASES = {
     "operating_expenses": ["operating expenses", "opex", "total operating expenses", "运营费用", "经营费用", "营业费用合计"],
     "warehousing": ["warehousing", "3pl", "storage cost", "仓储费", "第三方仓储费"],
     "outbound_shipping": ["outbound shipping", "last mile shipping", "delivery cost", "尾程物流", "尾程运费"],
+    "other_cogs": ["other cogs", "other cost of sales", "其他销售成本"],
+    "operating_cash_flow": ["operating cash flow", "cash from operations", "经营现金流"],
+    "free_cash_flow": ["free cash flow", "fcf", "自由现金流"],
     "gross_profit": ["gross profit", "gross earnings", "毛利润", "毛利"],
     "contribution_profit": ["contribution profit", "contribution margin dollars", "contribution income", "贡献利润", "贡献毛利"],
     "net_income": ["net income", "net profit", "profit after tax", "净利润", "税后利润"],
@@ -68,6 +71,23 @@ def normalize_label(value: Any) -> str:
 
 
 ALIAS_LOOKUP = {normalize_label(alias): field for field, aliases in ALIASES.items() for alias in aliases}
+
+
+def resolve_finance_label(value: Any) -> str | None:
+    """Map bilingual headers like '净收入\\nNet Revenue' without guessing ambiguous text."""
+    exact = ALIAS_LOOKUP.get(normalize_label(value))
+    if exact:
+        return exact
+    candidates = re.split(r"[\\n/|]", str(value or ""))
+    for candidate in reversed(candidates):
+        match = ALIAS_LOOKUP.get(normalize_label(candidate))
+        if match:
+            return match
+        for sub in re.split(r"\\s*&\\s*", candidate):
+            match = ALIAS_LOOKUP.get(normalize_label(sub))
+            if match and match not in ("channel",):
+                return match
+    return None
 METRIC_ALIAS_LOOKUP = {key: value for key, value in ALIAS_LOOKUP.items() if value in NUMERIC_FIELDS}
 
 
@@ -86,7 +106,7 @@ def _header_row(raw: pd.DataFrame) -> int:
     for idx in range(min(len(raw), 20)):
         values = [normalize_label(v) for v in raw.iloc[idx].tolist()]
         values = [v for v in values if v and v not in ("nan", "none")]
-        alias_hits = sum(v in ALIAS_LOOKUP for v in values)
+        alias_hits = sum(resolve_finance_label(v) is not None for v in raw.iloc[idx].tolist())
         period_hits = sum(_period_from_token(v) is not None for v in values)
         numeric_like = sum(bool(re.fullmatch(r"[-+()$¥￥€£,\d.%]+", v)) for v in values)
         score = alias_hits * 12 + period_hits * 6 + min(len(values), 20) - numeric_like * 0.4
@@ -239,7 +259,7 @@ def _clean_table(filename: str, sheet: str, raw: pd.DataFrame) -> tuple[pd.DataF
                 header = next(csv.reader([first], delimiter=delimiter))
             except csv.Error:
                 continue
-            hits = sum(normalize_label(part) in ALIAS_LOOKUP for part in header)
+            hits = sum(resolve_finance_label(part) is not None for part in header)
             if len(header) >= 3 and hits >= 2:
                 parsed = list(csv.reader(
                     [str(value) if pd.notna(value) else "" for value in raw.iloc[:, 0]],
@@ -263,10 +283,10 @@ def _clean_table(filename: str, sheet: str, raw: pd.DataFrame) -> tuple[pd.DataF
 
     mapped_columns: dict[str, list[str]] = {}
     for column in data.columns:
-        canonical = column if column in TEXT_FIELDS + NUMERIC_FIELDS else ALIAS_LOOKUP.get(normalize_label(column))
+        canonical = column if column in TEXT_FIELDS + NUMERIC_FIELDS else resolve_finance_label(column)
         if canonical:
             mapped_columns.setdefault(canonical, []).append(column)
-    unmapped = [str(column) for column in data.columns if not (column in TEXT_FIELDS + NUMERIC_FIELDS or ALIAS_LOOKUP.get(normalize_label(column)))]
+    unmapped = [str(column) for column in data.columns if not (column in TEXT_FIELDS + NUMERIC_FIELDS or resolve_finance_label(column))]
     if unmapped:
         issues.append(_issue("Warning / 警告", filename, sheet, f"{len(unmapped)} unmapped columns / {len(unmapped)} 个字段未映射", len(data), "Review the unmapped-field list / 复核未映射字段清单"))
 
@@ -471,7 +491,8 @@ def ingest_finance_files(file_payloads: tuple[tuple[str, bytes], ...], selected_
     ].notna().all(axis=1)
     computed_gross = (canonical["net_revenue"] - canonical["product_cost"]
                       - canonical["freight"] - canonical["tariff"])
-    gross_conflict = gross_components & gross_input.notna() & (
+    extra_cogs_present = canonical[["warehousing", "outbound_shipping", "other_cogs"]].notna().any(axis=1)
+    gross_conflict = gross_components & gross_input.notna() & ~extra_cogs_present & (
         (gross_input - computed_gross).abs() > 0.01
     )
     if gross_conflict.any():
