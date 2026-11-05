@@ -78,12 +78,12 @@ def resolve_finance_label(value: Any) -> str | None:
     exact = ALIAS_LOOKUP.get(normalize_label(value))
     if exact:
         return exact
-    candidates = re.split(r"[\\n/|]", str(value or ""))
+    candidates = str(value or "").replace("\n", "/").replace("|", "/").split("/")
     for candidate in reversed(candidates):
         match = ALIAS_LOOKUP.get(normalize_label(candidate))
         if match:
             return match
-        for sub in re.split(r"\\s*&\\s*", candidate):
+        for sub in candidate.split("&"):
             match = ALIAS_LOOKUP.get(normalize_label(sub))
             if match and match not in ("channel",):
                 return match
