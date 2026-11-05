@@ -262,15 +262,30 @@ def scenario(data: pd.DataFrame | None,role: str):
     new_tariff=new_product*tariff_new
     new_platform=new_revenue*max(0,platform/rev+platform_delta)
     new_ad=marketing if ad_mode.startswith("Keep spend") else marketing*new_revenue/rev
-    scenario_contribution=new_revenue-new_product-new_freight-new_tariff-new_platform-new_ad
-    derived_baseline=rev-product-freight-tariff-platform-marketing
+    # Anchor the scenario to actual source contribution profit rather than an
+    # incomplete recomputation of all historical COGS. Optional warehousing
+    # and outbound costs scale with volume; other COGS scales with revenue.
+    if cp is None:
+        right.metric("Scenario Contribution / 情景贡献利润","N/A")
+        third.metric("Incremental Profit / 贡献利润变化","N/A")
+        st.warning("A source-backed contribution-profit baseline is required / 需要可追溯的基准贡献利润。")
+        return
+    warehousing=value(cur,"warehousing")
+    outbound=value(cur,"outbound_shipping")
+    other=value(cur,"other_cogs")
+    extra_delta=(warehousing or 0)*(volume_factor-1)+(outbound or 0)*(volume_factor-1)
+    extra_delta+=(other or 0)*(new_revenue/rev-1)
+    delta_contribution=(new_revenue-rev)-(new_product-product)-(new_freight-freight)
+    delta_contribution-=(new_tariff-tariff)+(new_platform-platform)+(new_ad-marketing)+extra_delta
+    scenario_contribution=cp+delta_contribution
     right.metric("Scenario Contribution / 情景贡献利润",money(scenario_contribution))
-    third.metric("Incremental Profit / 贡献利润变化",money(scenario_contribution-derived_baseline))
+    third.metric("Incremental Profit / 贡献利润变化",money(delta_contribution))
     bridge=pd.DataFrame({
         "Component / 项目":["Revenue / 收入","Product Cost / 商品成本","Freight / 运费",
-            "Tariff / 关税","Platform Fee / 平台费","Advertising / 广告费","Contribution / 贡献利润"],
-        "Baseline / 基准":[rev,-product,-freight,-tariff,-platform,-marketing,derived_baseline],
-        "Scenario / 情景":[new_revenue,-new_product,-new_freight,-new_tariff,-new_platform,-new_ad,scenario_contribution]})
+            "Tariff / 关税","Platform Fee / 平台费","Advertising / 广告费",
+            "Other known variable cost change / 其他变动成本","Contribution / 贡献利润"],
+        "Baseline / 基准":[rev,-product,-freight,-tariff,-platform,-marketing,0.0,cp],
+        "Scenario / 情景":[new_revenue,-new_product,-new_freight,-new_tariff,-new_platform,-new_ad,-extra_delta,scenario_contribution]})
     st.dataframe(bridge,hide_index=True,use_container_width=True)
-    st.caption("This is a sensitivity calculation, not a demand forecast. Fixed overhead, tax, inventory constraints and second-order effects are excluded / 这是敏感性分析，不代表需求预测或净利润。")
+    st.caption("This is a sensitivity calculation, not a demand forecast. Unavailable cost categories are held unchanged, not certified as zero. Fixed overhead, tax and inventory constraints are excluded / 这是敏感性分析，缺失的成本驱动项不假定为零，也不代表净利润。")
     st.info("Sales VP: test promotion and pricing decisions. CFO: confirm margin, tariff and fee exposure before approving a change. / 商务决策须经过财务复核。")
