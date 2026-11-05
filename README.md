@@ -1,16 +1,16 @@
 # OLX Finance Intelligence / OLX 财务智能系统
 
-**Default: empty financial workspace.** No synthetic revenue, margin, or analysis appears until the user uploads source reports and selects **Validate & Load** in **ERP Integration / ERP 集成**. The clean, white/cream CFO and Sales VP interface has four executive dashboards plus operational pages:
+**Default: empty financial workspace.** No sample company metrics appear on the live dashboard until an uploaded workbook or source file is validated. The main navigation now contains exactly **three role-aware executive pages**:
 
-1. **Executive Overview / 经营总览** — revenue, gross margin direction, true net profit only when supplied, contribution profit separately, and revenue/cost concentration.
-2. **Performance Matrix / 经营表现** — channel/category/SKU comparisons, revenue, gross profit, contribution profit, sortable best/worst performers.
-3. **Cash & Cost / 现金与成本** — actual cash inflow/outflow when uploaded, marketplace settlement cash separately, cost structure and missing overhead disclosure.
-4. **Risk Monitor / 风险预警** — configurable gross-margin and inventory thresholds, open review list, inventory based on latest period snapshot.
-5. **ERP Integration / ERP 集成** — source intake, validation, source audit, independent GL comparison and a documented extraction → canonical mapping → database → scheduling architecture. Live APIs, hosted DB and daily cron are **not** connected.
-6. **Financial Reporting / 财务报告** — period-filtered P&L, KPI comparisons, channel breakdown, source detail and separate GL status. Estimates/unallocated amounts are not invented.
-7. **Analysis & Planning / 分析与规划** — user-selected KPI trends, month/quarter/year variance, driver breakdown and an explicitly assumption-based pricing sensitivity.
+1. **Executive Overview / 经营总览** — CFO: Net Revenue, Gross Margin, EBITDA and Net Income (only if sourced), trends, channel mix and finance exceptions. Sales VP: revenue, gross margin, units, return rate, channel contribution and AOV.
+2. **Margin & Inventory Analysis / 毛利与库存分析** — channel/category/SKU comparisons, best/worst profitability where complete, gross-margin threshold, stock snapshots and DIO where supplied.
+3. **What-if Scenario / 情景模拟** — price changes, volume elasticity, returns, platform fees, tariff and advertising assumptions. Profit sensitivities anchor to uploaded contribution profit, with additional source costs modeled when available. Never described as measured demand forecasts.
 
-Switch **View As / 角色** between **CFO** and **Sales VP**. Toggle **Case Studies & Code / 案例与代码** for synthetic portfolio demos, which are not part of the main workspace.
+CFO ↔ Sales VP switch remains in the sidebar. **Data & System Tools** (ERP Integration, detailed reporting, analysis and workflow) and **Case Studies & Code** are hidden behind separate toggles.
+
+**Excel workbook handling:** When a workbook includes a traceable `Monthly Data / 月度数据` sheet, that tab is selected by default for the historical trend and P&L baseline. Bilingual headers such as `净收入 / Net Revenue` are mapped. Optional `Channel P&L / 渠道利润` and `Margin-COGS / 毛利与成本` summary tabs are extracted as **separately scoped YTD exhibits**, never added on top of monthly facts. YTD estimated cost allocations are labeled accordingly. A summary without channel/category/SKU facts cannot generate fictional granular drilldowns.
+
+**Financial policy:** Source Net Income and EBITDA are not inferred from contribution profit. Missing cost inputs make the affected scenario profit unavailable. GL state remains independent of operational calculations. Actual cash flow, inventory thresholds and forecasts require their relevant approved inputs.
 
 ```bash
 pip install -r requirements.txt
