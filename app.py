@@ -290,10 +290,9 @@ def main():
         st.caption("Finance Intelligence / 财务智能系统")
         role=st.radio("View As / 角色",["CFO","Sales VP"],horizontal=True)
         page=st.radio("Executive Dashboards / 管理看板",[
-            "Executive Overview / 经营总览",
-            "Performance Matrix / 经营表现",
-            "Cash & Cost / 现金流与成本",
-            "Risk Monitor / 风险预警"])
+            "1. Executive Overview / 经营总览",
+            "2. Margin & Inventory Analysis / 毛利与库存",
+            "3. What-if Scenario / 情景模拟"])
         st.divider()
         show_tools=st.toggle("Data & System Tools / 数据与系统",value=False)
         if show_tools:
@@ -305,18 +304,15 @@ def main():
         show_cases=st.toggle("Case Studies & Code / 案例与代码",value=False)
         st.caption("NO DATA / 尚无数据" if ready() is None else f"Validated records: {len(ready()):,}")
     if show_cases:cases()
-    elif page.startswith("Executive"):
-        from executive_workspace import overview
+    elif page.startswith("1."):
+        from three_page_dashboard import overview
         overview(ready(),role)
-    elif page.startswith("Performance"):
-        from executive_workspace import matrix
-        matrix(ready(),role)
-    elif page.startswith("Cash"):
-        from executive_workspace import cash_cost
-        cash_cost(ready(),role)
-    elif page.startswith("Risk"):
-        from executive_workspace import risk
-        risk(ready(),role)
+    elif page.startswith("2."):
+        from three_page_dashboard import margin_inventory
+        margin_inventory(ready(),role)
+    elif page.startswith("3."):
+        from three_page_dashboard import scenario
+        scenario(ready(),role)
     elif page.startswith("ERP"):integration()
     elif page.startswith("Financial"):report(role)
     elif page.startswith("Organization"):
