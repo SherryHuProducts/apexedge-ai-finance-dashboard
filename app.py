@@ -100,11 +100,26 @@ architecture only, not deployed OLX integrations.
                         if sheet in chosen:
                             selected_sheet_ids.append(f"{f.name}::{sheet}")
                             st.markdown(f"**{sheet}** · {len(raw):,} raw rows")
-                            st.dataframe(raw.head(6),hide_index=True,use_container_width=True)
+                            st.dataframe(raw.head(6).fillna("").astype(str),hide_index=True,use_container_width=True)
                 except Exception as exc:
                     st.warning(f"{f.name}: {exc}")
     if st.button("Validate & Load / 验证并加载",type="primary",disabled=not selected_sheet_ids):
-        result=ingest_finance_files(tuple((f.name,f.getvalue()) for f in files),tuple(selected_sheet_ids))
+        # Preserve explicit worksheet selection: mixing a monthly fact with summary
+        # tabs would double-count revenue. Older deployed pipelines may still expose
+        # a one-argument signature, so never silently ingest every sheet instead.
+        import inspect
+        from io import BytesIO
+        import data_pipeline as pipeline_module
+        payloads=tuple((f.name,f.getvalue()) for f in files)
+        active_pipeline=pipeline_module.ingest_finance_files
+        if "selected_sheets" not in inspect.signature(active_pipeline).parameters:
+            st.error("Deployment version mismatch / 部署版本不同步：请在 Streamlit Cloud 重启应用以加载最新数据管道。为防止重复计入多个工作表，本次没有导入数据。")
+            return
+        try:
+            result=active_pipeline(payloads,selected_sheets=tuple(selected_sheet_ids))
+        except Exception as exc:
+            st.error(f"Validation could not complete / 数据校验未完成：{type(exc).__name__}: {exc}")
+            return
         frame=result["canonical"]
         valid=frame.loc[frame["revenue_ready"]].copy() if not frame.empty else frame
         st.session_state["olx_data"]=valid
