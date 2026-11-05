@@ -242,7 +242,7 @@ def scenario(data: pd.DataFrame | None,role: str):
     platform_delta=d.slider("Platform fee rate change / 平台费率变化 (pp)",-5.0,10.0,0.0,0.5)/100
     baseline_product=value(cur,"product_cost")
     baseline_tariff=value(cur,"tariff")
-    current_tariff=round(max(0.0,min(100.0,baseline_tariff/baseline_product*100)),1) if baseline_product and baseline_tariff is not None else 0.0
+    current_tariff=max(0.0,min(100.0,baseline_tariff/baseline_product*100)) if baseline_product and baseline_tariff is not None else 0.0
     tariff_new=e.number_input("New tariff rate on product cost / 新关税率 (%)",
                               min_value=0.0,max_value=100.0,value=current_tariff,step=1.0)/100
     ad_mode=f.radio("Advertising assumption / 广告假设",["Keep spend / 金额不变","Keep rate / 费率不变"],horizontal=False)
